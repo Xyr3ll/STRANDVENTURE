@@ -161,6 +161,7 @@
             <label class="form-label">Birthday</label>
             <input type="date" class="form-control" id="addBirthday" required>
           </div>
+          <div class="form-text mt-2">Created accounts will have a default password of <strong>Student@123</strong>.</div>
         </form>
       </div>
       <div class="modal-footer">
@@ -312,6 +313,48 @@
     selectAll.addEventListener('change',()=>{
         document.querySelectorAll('#studentsTable tbody input.row-select').forEach(cb=>cb.checked=selectAll.checked);
     });
+
+  function getSelectedIds(){
+    return Array.from(document.querySelectorAll('#studentsTable tbody input.row-select:checked')).map(x=>x.getAttribute('data-id'));
+  }
+
+  // Bulk delete with pre-check (Students)
+  document.getElementById('btnBulkDelete').addEventListener('click', async ()=>{
+    const ids = getSelectedIds();
+    if(ids.length===0){ await Swal.fire({ icon:'info', title:'No selection', text:'Select at least one student.' }); return; }
+    const confirmDlg = await Swal.fire({ icon:'warning', title:`Delete ${ids.length} selected student(s)?`, text:'This action cannot be undone.', showCancelButton:true, confirmButtonText:'Continue', cancelButtonText:'Cancel' });
+    if(!confirmDlg.isConfirmed) return;
+
+    try{
+      const check = await precheck(ids);
+      if(!check) return;
+      const blocked = (check.notFound||[]);
+      const unauthorized = (check.unauthorized||[]);
+      const allowed = (check.ok||[]);
+      if(allowed.length===0){
+        const reasons = blocked.length ? 'Not Found: ' + blocked.join(', ') : '';
+        await Swal.fire({ icon:'warning', title:'No deletions performed', html:`<div class="text-start">Some items cannot be deleted:<br/>${reasons}</div>` });
+        return;
+      }
+      if(blocked.length || unauthorized.length){
+        const reasonsHtml = (blocked.length? ('Not Found: ' + blocked.join(', ')) : '') + (unauthorized.length? ('<br/>Unauthorized: '+ unauthorized.length) : '');
+        const proceed = await Swal.fire({ icon:'warning', title:'Some items cannot be deleted', html:`<div class="text-start mb-2">The following will be skipped:<br/>${reasonsHtml}</div><div>Proceed deleting the rest?</div>`, showCancelButton:true, confirmButtonText:'Delete allowed', cancelButtonText:'Cancel' });
+        if(!proceed.isConfirmed) return;
+      }
+
+      const res = await fetch('@Url.Action("BulkDeleteStudents","StudentManagement")',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ ids: allowed }) });
+      const j = await res.json().catch(()=>({}));
+      if(!res.ok){ await Swal.fire({ icon:'error', title:'Failed', text: j.message || 'Bulk delete failed.' }); return; }
+      let msg = `Deleted: ${j.deleted}`;
+      if((j.notFound||[]).length){ msg += `\nNot Found: ${j.notFound.length}`; }
+      if((j.unauthorized||[]).length){ msg += `\nUnauthorized: ${j.unauthorized.length}`; }
+      if(j.errors && j.errors.length){ msg += `\nErrors: ${j.errors.join(', ')}`; }
+      await Swal.fire({ icon:'success', title:'Done', html:`<pre class="text-start mb-0">${msg}</pre>` });
+      selectAll.checked = false;
+      document.querySelectorAll('#studentsTable tbody input.row-select').forEach(cb=>cb.checked=false);
+      table.ajax.reload(null,false);
+    }catch{ await Swal.fire({ icon:'error', title:'Failed', text:'Bulk delete failed.' }); }
+  });
 
     async function precheck(ids){
         try{

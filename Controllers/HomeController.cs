@@ -232,7 +232,7 @@ public class HomeController : Controller
 
                 if (employee.Role == EmployeeRole.SuperAdmin) {
                     _logger.LogInformation("SuperAdmin {Email} logged in successfully", model.Input.Email);
-                    return RedirectToAction("Index", "TeacherManagement", new { id = employee?.Id });
+                    return RedirectToAction("Index", "TeacherDashboard", new { id = employee?.Id });
                 }
 
                 if (model.Input.RememberMe) {

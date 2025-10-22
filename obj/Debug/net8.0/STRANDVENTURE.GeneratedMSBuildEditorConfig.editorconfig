@@ -1,0 +1,143 @@
+is_global = true
+build_property.TargetFramework = net8.0
+build_property.TargetPlatformMinVersion = 
+build_property.UsingMicrosoftNETSdkWeb = true
+build_property.ProjectTypeGuids = 
+build_property.InvariantGlobalization = 
+build_property.PlatformNeutralAssembly = 
+build_property.EnforceExtendedAnalyzerRules = 
+build_property._SupportedPlatformList = Linux,macOS,Windows
+build_property.RootNamespace = STRANDVENTURE
+build_property.RootNamespace = STRANDVENTURE
+build_property.ProjectDir = D:\CLIENT SYSTEM\STRANDVENTURE-demo\STRANDVENTURE\
+build_property.EnableComHosting = 
+build_property.EnableGeneratedComInterfaceComImportInterop = 
+build_property.RazorLangVersion = 8.0
+build_property.SupportLocalizedComponentNames = 
+build_property.GenerateRazorMetadataSourceChecksumAttributes = 
+build_property.MSBuildProjectDirectory = D:\CLIENT SYSTEM\STRANDVENTURE-demo\STRANDVENTURE
+build_property._RazorSourceGeneratorDebug = 
+
+[D:/CLIENT SYSTEM/STRANDVENTURE-demo/STRANDVENTURE/Views/AchievementManagement/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQWNoaWV2ZW1lbnRNYW5hZ2VtZW50XEluZGV4LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/CLIENT SYSTEM/STRANDVENTURE-demo/STRANDVENTURE/Views/AssessmentManagement/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQXNzZXNzbWVudE1hbmFnZW1lbnRcSW5kZXguY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/CLIENT SYSTEM/STRANDVENTURE-demo/STRANDVENTURE/Views/Home/StudentForgotPassword.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZVxTdHVkZW50Rm9yZ290UGFzc3dvcmQuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/CLIENT SYSTEM/STRANDVENTURE-demo/STRANDVENTURE/Views/Home/StudentLogin.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZVxTdHVkZW50TG9naW4uY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/CLIENT SYSTEM/STRANDVENTURE-demo/STRANDVENTURE/Views/Home/TeacherForgotPassword.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZVxUZWFjaGVyRm9yZ290UGFzc3dvcmQuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/CLIENT SYSTEM/STRANDVENTURE-demo/STRANDVENTURE/Views/Home/TeacherLogin.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZVxUZWFjaGVyTG9naW4uY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/CLIENT SYSTEM/STRANDVENTURE-demo/STRANDVENTURE/Views/SectionManagement/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2VjdGlvbk1hbmFnZW1lbnRcSW5kZXguY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/CLIENT SYSTEM/STRANDVENTURE-demo/STRANDVENTURE/Views/SettingsStudent/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NTdHVkZW50XEluZGV4LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/CLIENT SYSTEM/STRANDVENTURE-demo/STRANDVENTURE/Views/SettingsTeacher/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NUZWFjaGVyXEluZGV4LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/CLIENT SYSTEM/STRANDVENTURE-demo/STRANDVENTURE/Views/Shared/Error.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXEVycm9yLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/CLIENT SYSTEM/STRANDVENTURE-demo/STRANDVENTURE/Views/Shared/_ValidationScriptsPartial.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXF9WYWxpZGF0aW9uU2NyaXB0c1BhcnRpYWwuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/CLIENT SYSTEM/STRANDVENTURE-demo/STRANDVENTURE/Views/StrandManagement/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU3RyYW5kTWFuYWdlbWVudFxJbmRleC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/CLIENT SYSTEM/STRANDVENTURE-demo/STRANDVENTURE/Views/StrandQuizManagement/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU3RyYW5kUXVpek1hbmFnZW1lbnRcSW5kZXguY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/CLIENT SYSTEM/STRANDVENTURE-demo/STRANDVENTURE/Views/StrandQuizManagement/Questions.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU3RyYW5kUXVpek1hbmFnZW1lbnRcUXVlc3Rpb25zLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/CLIENT SYSTEM/STRANDVENTURE-demo/STRANDVENTURE/Views/StudentAchievements/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU3R1ZGVudEFjaGlldmVtZW50c1xJbmRleC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/CLIENT SYSTEM/STRANDVENTURE-demo/STRANDVENTURE/Views/StudentAssessment/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU3R1ZGVudEFzc2Vzc21lbnRcSW5kZXguY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/CLIENT SYSTEM/STRANDVENTURE-demo/STRANDVENTURE/Views/StudentAssessment/Take.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU3R1ZGVudEFzc2Vzc21lbnRcVGFrZS5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/CLIENT SYSTEM/STRANDVENTURE-demo/STRANDVENTURE/Views/StudentDashboard/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU3R1ZGVudERhc2hib2FyZFxJbmRleC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/CLIENT SYSTEM/STRANDVENTURE-demo/STRANDVENTURE/Views/StudentManagement/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU3R1ZGVudE1hbmFnZW1lbnRcSW5kZXguY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/CLIENT SYSTEM/STRANDVENTURE-demo/STRANDVENTURE/Views/StudentReports/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU3R1ZGVudFJlcG9ydHNcSW5kZXguY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/CLIENT SYSTEM/STRANDVENTURE-demo/STRANDVENTURE/Views/StudentResults/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU3R1ZGVudFJlc3VsdHNcSW5kZXguY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/CLIENT SYSTEM/STRANDVENTURE-demo/STRANDVENTURE/Views/StudentStrandQuiz/Launch.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU3R1ZGVudFN0cmFuZFF1aXpcTGF1bmNoLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/CLIENT SYSTEM/STRANDVENTURE-demo/STRANDVENTURE/Views/StudentStrandQuiz/Play.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU3R1ZGVudFN0cmFuZFF1aXpcUGxheS5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/CLIENT SYSTEM/STRANDVENTURE-demo/STRANDVENTURE/Views/StudentStrandQuiz/Results.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU3R1ZGVudFN0cmFuZFF1aXpcUmVzdWx0cy5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/CLIENT SYSTEM/STRANDVENTURE-demo/STRANDVENTURE/Views/SuperAdminDashboard/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU3VwZXJBZG1pbkRhc2hib2FyZFxJbmRleC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/CLIENT SYSTEM/STRANDVENTURE-demo/STRANDVENTURE/Views/TeacherDashboard/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVGVhY2hlckRhc2hib2FyZFxJbmRleC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/CLIENT SYSTEM/STRANDVENTURE-demo/STRANDVENTURE/Views/TeacherManagement/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVGVhY2hlck1hbmFnZW1lbnRcSW5kZXguY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/CLIENT SYSTEM/STRANDVENTURE-demo/STRANDVENTURE/Views/_ViewImports.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcX1ZpZXdJbXBvcnRzLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/CLIENT SYSTEM/STRANDVENTURE-demo/STRANDVENTURE/Views/_ViewStart.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcX1ZpZXdTdGFydC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/CLIENT SYSTEM/STRANDVENTURE-demo/STRANDVENTURE/Views/Shared/_Layout.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXF9MYXlvdXQuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = b-z078jz7y3a
+
+[D:/CLIENT SYSTEM/STRANDVENTURE-demo/STRANDVENTURE/Views/Shared/_TeacherLayout.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXF9UZWFjaGVyTGF5b3V0LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = b-vd34ewfu0s
