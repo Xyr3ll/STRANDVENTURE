@@ -1,0 +1,98 @@
+@model StudentAssessmentViewModel
+@{
+    ViewData["Title"] = "Assessment";
+}
+<style>
+    .assessment-shell { width: 100% }
+    .assessment-card { background:#fff; border-radius:14px; padding:2.25rem 2rem 2.5rem; box-shadow:0 2px 4px rgba(0,0,0,.06); }
+    .assessment-title { font-weight:700; font-size:1.6rem; }
+    .assessment-lead { font-size:.85rem; max-width:620px; margin:.35rem auto 1.75rem; color:#5d6673; }
+    .how-box { background:#f2f6fb; border-radius:8px; padding:1.15rem 1.25rem 1.1rem; margin:0 auto 1.9rem; }
+    .how-box h6 { font-weight:700; margin-bottom:.65rem; }
+    .how-box ul { margin:0; padding-left:1.15rem; font-size:.85rem; }
+    .how-box li + li { margin-top:.35rem; }
+
+    /* Reuse dashboard gradient CTA styling */
+    .btn-assessment-main { 
+        position:relative; 
+        background:linear-gradient(90deg,#0f5aa6 0%, #1478e1 50%, #0f5aa6 100%);
+        background-size:200% 100%;
+        border:none; 
+        color:#fff; 
+        font-weight:600; 
+        letter-spacing:.3px;
+        padding:.8rem 1.55rem; 
+        border-radius:12px; 
+        box-shadow:0 4px 12px -2px rgba(15,90,166,.45); 
+        display:inline-flex; 
+        align-items:center; 
+        gap:.55rem; 
+        transition:background-position .5s ease, box-shadow .25s ease, transform .25s ease;
+    }
+    .btn-assessment-main i { font-size:1.1rem; }
+    .btn-assessment-main:hover, .btn-assessment-main:focus { 
+        background-position:100% 0; 
+        box-shadow:0 8px 22px -6px rgba(15,90,166,.55), 0 0 0 3px rgba(20,120,225,.25); 
+        transform:translateY(-3px); 
+        color:#fff; 
+        text-decoration:none;
+    }
+    .btn-assessment-main:active { transform:translateY(-1px); box-shadow:0 5px 14px -4px rgba(15,90,166,.55); }
+    .btn-assessment-main::after { 
+        content:""; 
+        position:absolute; 
+        inset:0; 
+        border-radius:inherit; 
+        background:radial-gradient(circle at 30% 30%, rgba(255,255,255,.35), transparent 60%); 
+        mix-blend-mode:overlay; 
+        pointer-events:none; 
+    }
+    .btn-assessment-main[disabled] { opacity:.65; transform:none; background-position:0 0; }
+
+    .btn-outline-neutral { background:#fff; border:1px solid #0f5aa6; color:#0f5aa6; font-weight:600; padding:.75rem 1.25rem; border-radius:10px; }
+    .btn-outline-neutral:hover, .btn-outline-neutral:focus { background:#0f5aa6; color:#fff; text-decoration:none; }
+    .attempt-note { font-size:.8rem; margin-top:.75rem; color:#6c7680; }
+</style>
+<h2 class="fw-bold mb-4">Assessment</h2>
+<div class="assessment-shell">
+    <div class="assessment-card">
+        <div class="text-center mb-3">
+            <div class="assessment-title">Academic Strand Assessment</div>
+            <p class="assessment-lead">Discover which senior high school strand aligns with your interests, skills, and goals through our interactive assessment.</p>
+        </div>
+        <div class="how-box">
+            <h6>How It Works:</h6>
+            <ul>
+                <li>You will answer up to 60 questions about your preferences and skills</li>
+                <li>Each question helps us understand your unique strengths</li>
+                <li>Your answers will determine your strand compatibility</li>
+                <li>At the end, you receive personalized recommendations</li>
+                <li>The assessment takes about 10–15 minutes to complete</li>
+            </ul>
+        </div>
+
+        <div class="d-flex flex-wrap gap-3">
+            @if (Model.CanStartNewAttempt)
+            {
+                <form asp-action="Start" method="post" class="m-0">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-assessment-main">
+                        <i class="bi bi-play-fill"></i><span>Start Assessment</span>
+                    </button>
+                </form>
+            }
+            else
+            {
+                <button type="button" class="btn btn-assessment-main" disabled>
+                    <i class="bi bi-hourglass-split"></i><span>Assessment In Progress</span>
+                </button>
+            }
+            <a asp-controller="StudentDashboard" asp-action="Index" class="btn btn-outline-neutral">Back To Dashboard</a>
+        </div>
+        @if (!Model.CanStartNewAttempt && Model.ActiveAttemptId.HasValue)
+        {
+            <div class="attempt-note"><a href="@Url.Action("Take", "StudentAssessment")?attemptId=@Model.ActiveAttemptId">Continue Assessment</a> You must finish it before starting another.</div>
+        }
+        <div class="attempt-note mt-3">Total Attempts Taken: <strong>@Model.ExistingAttempts</strong></div>
+    </div>
+</div>

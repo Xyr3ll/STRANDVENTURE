@@ -1,0 +1,331 @@
+﻿@model dynamic
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - STRANDVENTURE</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/STRANDVENTURE.styles.css" asp-append-version="true" />
+    <!-- Icons for menu -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <style>
+        /* Portal header look-and-feel (scoped to header classes) */
+        .portal-header { margin-bottom: 1rem; }
+        .portal-topbar {
+            background: #0f5aa6; color: #fff; border-bottom: 1px solid rgba(255,255,255,.2);
+        }
+        .portal-subheader { background: #1565c0; color: #fff; }
+        .portal-topbar .container-fluid,
+        .portal-subheader .container-fluid { padding-top: .85rem; padding-bottom: .85rem; }
+        .avatar-circle {
+            width: 40px; height: 40px; border-radius: 999px;
+            display: inline-flex; align-items: center; justify-content: center;
+            background: rgba(255,255,255,.9); color: #0f5aa6; font-weight: 700;
+        }
+        .portal-title { font-size: 1.25rem; font-weight: 700; }
+
+        /* Navbar styling to keep the pill look */
+        .portal-navbar .nav-link {
+            background: #ffffff; color: #0f5aa6; border-radius: .6rem; font-weight: 600;
+            padding: .45rem .9rem; margin-right: .25rem; margin-bottom: .25rem;
+        }
+        /* Inactive links: transparent background, white text */
+        .portal-navbar.navbar-dark .navbar-nav .nav-link {
+            background-color: transparent;
+            color: rgba(255,255,255,.9);
+        }
+
+        /* Icons follow text color */
+        .portal-navbar .nav-link i { color: inherit; }
+
+        /* Hover/focus and active states */
+        .portal-navbar.navbar-dark .navbar-nav .nav-link:hover,
+        .portal-navbar.navbar-dark .navbar-nav .nav-link:focus {
+            background-color: rgba(255,255,255,.15);
+            color: #fff;
+        }
+        .portal-navbar.navbar-dark .navbar-nav .nav-link.active {
+            background-color: #0f5aa6;
+            color: #fff;
+        }
+
+        .welcome-sub { opacity: .8; }
+
+        /* Enhanced logout button */
+        .portal-topbar .btn-logout {
+            background: rgba(255,255,255,.12);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,.45);
+            border-radius: .5rem;
+            padding: .35rem .75rem;
+            box-shadow: 0 2px 6px rgba(0,0,0,.08) inset, 0 1px 0 rgba(255,255,255,.2);
+            transition: transform .12s ease, box-shadow .12s ease, background-color .12s ease, border-color .12s ease;
+        }
+        .portal-topbar .btn-logout:hover,
+        .portal-topbar .btn-logout:focus {
+            background: #dc3545;
+            border-color: #dc3545;
+            box-shadow: 0 .25rem .75rem rgba(220,53,69,.35);
+            transform: translateY(-1px);
+        }
+        .portal-topbar .btn-logout:active {
+            transform: translateY(0);
+            box-shadow: 0 .1rem .3rem rgba(220,53,69,.4) inset;
+        }
+
+        /* Navbar toggler contrast on blue background */
+        .portal-navbar .navbar-toggler {
+            border-color: rgba(255,255,255,.5);
+            color: #fff;
+        }
+        .portal-navbar .navbar-toggler:focus {
+            box-shadow: 0 0 0 .2rem rgba(255,255,255,.25);
+        }
+
+        /* Force white hamburger icon (SVG) */
+        .portal-navbar {
+            --bs-navbar-toggler-icon-bg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Cpath stroke='%23fff' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3E%3C/svg%3E");
+        }
+
+        /* DataTables (Bootstrap 5) portal theme */
+        .dt-container .form-control,
+        .dt-container .form-select {
+            border-radius: .5rem;
+            border-color: rgba(15,90,166,.35);
+        }
+        .dt-container .form-control:focus,
+        .dt-container .form-select:focus {
+            border-color: #0f5aa6;
+            box-shadow: 0 0 0 .2rem rgba(15,90,166,.25);
+        }
+
+        /* Pagination */
+        .dt-container .pagination .page-link {
+            color: #0f5aa6;
+            border-radius: .5rem;
+        }
+        .dt-container .pagination .page-link:hover {
+            background-color: rgba(15,90,166,.10);
+            border-color: rgba(15,90,166,.25);
+            color: #0f5aa6;
+        }
+        .dt-container .pagination .page-item.active .page-link {
+            background-color: #0f5aa6;
+            border-color: #0f5aa6;
+            color: #fff;
+        }
+        .dt-container .pagination .page-item.disabled .page-link {
+            color: #6c757d;
+        }
+
+        /* Info + length/search labels */
+        .dt-container .dt-info {
+            color: #6c757d;
+        }
+        .dt-container .dt-length label,
+        .dt-container .dt-search label {
+            color: #6c757d;
+            font-weight: 500;
+        }
+
+        /* Full-width body content with 10px horizontal padding */
+        .portal-content {
+            padding-left:10px;
+            padding-right:10px;
+            width:100%;
+        }
+        @@media (min-width: 992px) {
+            .portal-content { padding-left:10px; padding-right:10px; }
+        }
+    </style>
+</head>
+<body>
+    @{
+        bool isSuperAdmin = false;
+        if (Model.Employee != null) {
+            isSuperAdmin = Model.Employee.Role == EmployeeRole.SuperAdmin;
+            ViewData["PortalTitle"] = isSuperAdmin ? "Super Admin Portal" : "Teacher Portal";
+            ViewData["DisplayName"] = Model.Employee.Name;
+        }
+
+        var isAuth = User?.Identity?.IsAuthenticated == true;
+        var displayName = (string?)ViewData["DisplayName"] ?? "";
+        var initial = string.IsNullOrWhiteSpace(displayName) ? "U" : displayName.Trim()[0].ToString().ToUpperInvariant();
+        var portalTitle = (string?)ViewData["PortalTitle"] ?? "Teacher Portal";
+        var currentController = (string?)ViewContext.RouteData.Values["controller"] ?? "";
+        var currentAction = (string?)ViewContext.RouteData.Values["action"] ?? "";
+
+        bool onTeacherDashboard = string.Equals(currentController, "TeacherDashboard", StringComparison.OrdinalIgnoreCase)
+                                  && string.Equals(currentAction, "Index", StringComparison.OrdinalIgnoreCase);
+       
+
+        bool onStrandManagement = string.Equals(currentController, "StrandManagement", StringComparison.OrdinalIgnoreCase)
+                                  && string.Equals(currentAction, "Index", StringComparison.OrdinalIgnoreCase);
+        // Also treat StrandQuizManagement controller as part of strands section (any action)
+        bool onStrandQuizManagement = string.Equals(currentController, "StrandQuizManagement", StringComparison.OrdinalIgnoreCase);
+
+        bool onAchievementManagement = string.Equals(currentController, "AchievementManagement", StringComparison.OrdinalIgnoreCase)
+                                  && string.Equals(currentAction, "Index", StringComparison.OrdinalIgnoreCase);
+        
+        bool onSection = string.Equals(currentController, "SectionManagement", StringComparison.OrdinalIgnoreCase)
+                                  && string.Equals(currentAction, "Index", StringComparison.OrdinalIgnoreCase);
+        bool onAssessmentManagement = string.Equals(currentController, "AssessmentManagement", StringComparison.OrdinalIgnoreCase)
+                                  && string.Equals(currentAction, "Index", StringComparison.OrdinalIgnoreCase);
+        bool onStudentManagement = string.Equals(currentController, "StudentManagement", StringComparison.OrdinalIgnoreCase)
+                                  && string.Equals(currentAction, "Index", StringComparison.OrdinalIgnoreCase);
+        bool onStudentReports = string.Equals(currentController, "StudentReports", StringComparison.OrdinalIgnoreCase)
+                                  && string.Equals(currentAction, "Index", StringComparison.OrdinalIgnoreCase);
+        bool onSettings = string.Equals(currentController, "SettingsTeacher", StringComparison.OrdinalIgnoreCase)
+                                  && string.Equals(currentAction, "Index", StringComparison.OrdinalIgnoreCase);
+    }
+    <header class="portal-header">
+        <!-- Top blue bar -->
+        <div class="portal-topbar">
+            <div class="container-fluid d-flex align-items-center gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="avatar-circle">@initial</div>
+                    <span class="portal-title">@portalTitle</span>
+                </div>
+                <div class="ms-auto d-flex align-items-center gap-3">
+                    <span class="text-white">@displayName</span>
+                    <a class="btn btn-logout btn-sm d-inline-flex align-items-center"
+                       asp-area="" asp-controller="Home" asp-action="LogoutTeacher"
+                       title="Sign out" aria-label="Sign out">
+                        <i class="bi bi-box-arrow-right me-1"></i>
+                        <span class="d-none d-sm-inline">Logout</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Responsive navbar -->
+        <nav class="navbar navbar-expand-lg navbar-dark portal-subheader portal-navbar" aria-label="Teacher navigation">
+            <div class="container-fluid">
+                <button class="navbar-toggler" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#teacherNav"
+                        aria-controls="teacherNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                    <span class="ms-2">Menu</span>
+                </button>
+
+                <!-- Welcome text on small screens -->
+                <div class="d-lg-none text-white mt-2">
+                    <div class="fw-semibold">Welcome, @displayName</div>
+                    <div class="small welcome-sub">Access student assessment data and help guide them to their ideal academic path.</div>
+                </div>
+
+                <div class="collapse navbar-collapse" id="teacherNav">
+                    <ul class="navbar-nav me-auto mt-3 mt-lg-0 align-items-start align-items-lg-center">
+
+                        @if (isSuperAdmin == false) {
+                            <li class="nav-item">
+                                <a class="nav-link @(onTeacherDashboard ? "active" : "")"
+                                   asp-area="" asp-controller="TeacherDashboard" asp-action="Index" asp-route-id="@Model.Employee.Id">
+                                    <i class="bi bi-speedometer2 me-1"></i> Dashboard
+                                </a>
+                            </li>
+                        }
+                        
+                        @* Restrict only Assessment *@
+                        @if (isSuperAdmin)
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link @(onTeacherDashboard ? "active" : "")"
+                                   asp-area="" asp-controller="TeacherDashboard" asp-action="Index" asp-route-id="@Model.Employee.Id">
+                                    <i class="bi bi-speedometer2 me-1"></i> Dashboard
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link @(onStudentManagement ? "active" : "")"
+                                   asp-area="" asp-controller="StudentManagement" asp-action="Index" asp-route-id="@Model.Employee.Id">
+                                    <i class="bi bi-people me-1"></i> Manage Students
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link @(onStudentReports ? "active" : "")"
+                                   asp-area="" asp-controller="StudentReports" asp-action="Index" asp-route-id="@Model.Employee.Id">
+                                    <i class="bi bi-graph-up-arrow me-1"></i> Student Reports
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link @((onStrandManagement || onStrandQuizManagement) ? "active" : "")"
+                                   asp-area="" asp-controller="StrandManagement" asp-action="Index" asp-route-id="@Model.Employee.Id">
+                                    <i class="bi bi-collection me-1"></i> Strands
+                                </a>
+                            </li>   
+                            <li class="nav-item">
+                                <a class="nav-link @(onAchievementManagement ? "active" : "")"
+                                   asp-area="" asp-controller="AchievementManagement" asp-action="Index" asp-route-id="@Model.Employee.Id">
+                                    <i class="bi bi-collection me-1"></i> Achievements
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link @(onSection ? "active" : "")"
+                                   asp-area="" asp-controller="SectionManagement" asp-action="Index" asp-route-id="@Model.Employee.Id">
+                                    <i class="bi bi-collection me-1"></i> Section
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link @(onAssessmentManagement ? "active" : "")"
+                                   asp-area="" asp-controller="AssessmentManagement" asp-action="Index" asp-route-id="@Model.Employee.Id">
+                                    <i class="bi bi-clipboard-check me-1"></i> Assessment
+                                </a>
+                            </li>
+                        }
+
+                        @if (isSuperAdmin == false)
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link @(onStudentManagement ? "active" : "")"
+                                   asp-area="" asp-controller="StudentManagement" asp-action="Index" asp-route-id="@Model.Employee.Id">
+                                    <i class="bi bi-people me-1"></i> Manage Students
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link @(onStudentReports ? "active" : "")"
+                                   asp-area="" asp-controller="StudentReports" asp-action="Index" asp-route-id="@Model.Employee.Id">
+                                    <i class="bi bi-graph-up-arrow me-1"></i> Student Reports
+                                </a>
+                            </li>
+                        }
+
+                        
+                        <li class="nav-item">
+                            <a class="nav-link @(onSettings ? "active" : "")"
+                               asp-area="" asp-controller="SettingsTeacher" asp-action="Index" asp-route-id="@Model.Employee.Id">
+                                <i class="bi bi-gear me-1"></i> Settings
+                            </a>
+                        </li>
+                    </ul>
+
+                    <!-- Welcome text on large screens -->
+                    <div class="ms-lg-3 d-none d-lg-block text-white text-end">
+                        <div class="fw-semibold">Welcome, @displayName</div>
+                        <div class="small welcome-sub">Access student assessment data and help guide them to their ideal academic path.</div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Replaced .container with fluid custom wrapper -->
+    <div class="portal-content">
+        <main role="main" class="pb-3">
+            @RenderBody()
+        </main>
+    </div>
+
+    <footer class="border-top footer text-muted">
+        <div class="portal-content">
+            &copy; 2025 - STRANDVENTURE - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+        </div>
+    </footer>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @RenderSection("Scripts", required: false)
+</body>
+</html>

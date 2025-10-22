@@ -1,0 +1,160 @@
+@{
+    Layout = "~/Views/Shared/_TeacherLayout.cshtml";
+    ViewData["Title"] = "Settings";
+}
+@model STRANDVENTURE.Models.TeacherSettingsViewModel
+
+<style>
+    /* Full-width tabs container inside portal-content (respecting existing page padding) */
+    #settingsTabsContent { width:100%; max-width:100%; }
+    /* Optional: limit inner form width on very large screens if desired */
+    #settingsTabsContent form { max-width:520px; }
+</style>        
+
+<div class="mt-3">
+    <h2 class="mb-3">Settings</h2>
+    <p class="text-muted mb-4">Manage your account details and change your password.</p>
+
+    @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle me-1"></i> @Model.SuccessMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle me-1"></i> @Model.ErrorMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <ul class="nav nav-tabs" id="settingsTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="acct-tab" data-bs-toggle="tab" data-bs-target="#acct-pane" type="button" role="tab" aria-controls="acct-pane" aria-selected="true">
+                <i class="bi bi-person-circle me-1"></i> Account Details
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="pwd-tab" data-bs-toggle="tab" data-bs-target="#pwd-pane" type="button" role="tab" aria-controls="pwd-pane" aria-selected="false">
+                <i class="bi bi-key me-1"></i> Change Password
+            </button>
+        </li>
+    </ul>
+    <div class="tab-content border border-top-0 p-3 rounded-bottom bg-white shadow-sm" id="settingsTabsContent">
+        <div class="tab-pane fade show active" id="acct-pane" role="tabpanel" aria-labelledby="acct-tab">
+            <h5 class="mb-3">Account Information</h5>
+            <div class="row g-3">
+                <div class="col-12">
+                    <label class="form-label fw-semibold">Name</label>
+                    <input class="form-control" value="@Model.Name" readonly />
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-semibold">Email</label>
+                    <input class="form-control" value="@Model.Email" readonly />
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-semibold">Role</label>
+                    <input class="form-control" value="@Model.Role" readonly />
+                </div>
+            </div>
+            <div class="mt-3 text-muted small">If you need to update your name or email, please contact an administrator.</div>
+        </div>
+        <div class="tab-pane fade" id="pwd-pane" role="tabpanel" aria-labelledby="pwd-tab">
+            <h5 class="mb-3">Change Password</h5>
+            <form asp-action="ChangePassword" method="post" autocomplete="off" novalidate class="needs-validation">
+                @Html.AntiForgeryToken()
+                <div class="mb-3">
+                    <label asp-for="PasswordChange.CurrentPassword" class="form-label fw-semibold"></label>
+                    <div class="input-group">
+                        <input asp-for="PasswordChange.CurrentPassword" id="teacherCurrentPwd" class="form-control" type="password" required />
+                        <button class="btn btn-outline-secondary password-toggle" type="button" data-target="#teacherCurrentPwd" aria-label="Show password"><i class="bi bi-eye"></i></button>
+                    </div>
+                    <span asp-validation-for="PasswordChange.CurrentPassword" class="text-danger small"></span>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="PasswordChange.NewPassword" class="form-label fw-semibold"></label>
+                    <div class="input-group">
+                        <input asp-for="PasswordChange.NewPassword" id="teacherNewPwd" class="form-control" type="password" required minlength="8" />
+                        <button class="btn btn-outline-secondary password-toggle" type="button" data-target="#teacherNewPwd" aria-label="Show password"><i class="bi bi-eye"></i></button>
+                    </div>
+                    <span asp-validation-for="PasswordChange.NewPassword" class="text-danger small"></span>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="PasswordChange.ConfirmPassword" class="form-label fw-semibold"></label>
+                    <div class="input-group">
+                        <input asp-for="PasswordChange.ConfirmPassword" id="teacherConfirmPwd" class="form-control" type="password" required />
+                        <button class="btn btn-outline-secondary password-toggle" type="button" data-target="#teacherConfirmPwd" aria-label="Show password"><i class="bi bi-eye"></i></button>
+                    </div>
+                    <span asp-validation-for="PasswordChange.ConfirmPassword" class="text-danger small"></span>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-save me-1"></i> Save Changes
+                </button>
+            </form>
+            <div class="mt-3 small text-muted">
+                Password must be at least 8 characters and contain a mix of upper/lower case letters, numbers, and preferably a special character.
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function(){
+            // Persist active tab similar to student settings
+            const KEY='teacher_settings_active_tab_v1';
+            const stored=localStorage.getItem(KEY);
+            if(stored){
+                const trigger=document.querySelector('[data-bs-target="'+stored+'"]');
+                if(trigger){ new bootstrap.Tab(trigger).show(); }
+            }
+            document.querySelectorAll('#settingsTabs button[data-bs-toggle="tab"]').forEach(btn=>{
+                btn.addEventListener('shown.bs.tab', e=>{
+                    const target=e.target.getAttribute('data-bs-target');
+                    if(target) localStorage.setItem(KEY,target);
+                });
+            });
+
+            const form=document.querySelector('#pwd-pane form.needs-validation');
+            if(form){
+                form.addEventListener('submit',ev=>{
+                    if(!form.checkValidity()){
+                        ev.preventDefault(); ev.stopPropagation();
+                    }
+                    form.classList.add('was-validated');
+                    const newPwd=form.querySelector('#teacherNewPwd');
+                    const confirm=form.querySelector('#teacherConfirmPwd');
+                    if(newPwd && confirm){
+                        if(newPwd.value !== confirm.value){
+                            ev.preventDefault(); ev.stopPropagation();
+                            confirm.setCustomValidity('Mismatch');
+                        } else {
+                            confirm.setCustomValidity('');
+                        }
+                    }
+                });
+            }
+            // Show/hide password toggles
+            document.querySelectorAll('#pwd-pane .password-toggle').forEach(btn=>{
+                btn.addEventListener('click',()=>{
+                    const sel=btn.getAttribute('data-target');
+                    const input=document.querySelector(sel);
+                    if(!input) return;
+                    const icon=btn.querySelector('i');
+                    if(input.type==='password'){
+                        input.type='text';
+                        btn.setAttribute('aria-label','Hide password');
+                        icon?.classList.replace('bi-eye','bi-eye-slash');
+                    } else {
+                        input.type='password';
+                        btn.setAttribute('aria-label','Show password');
+                        icon?.classList.replace('bi-eye-slash','bi-eye');
+                    }
+                });
+            });
+        })();
+    </script>
+}

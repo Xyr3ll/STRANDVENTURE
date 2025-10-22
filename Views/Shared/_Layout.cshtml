@@ -1,0 +1,148 @@
+﻿@model dynamic
+@{
+    // Basic display info (set these in your controller, e.g. ViewData["DisplayName"])
+    var displayName = (string?)ViewData["DisplayName"] ?? "Student";
+    var initial = string.IsNullOrWhiteSpace(displayName) ? "S" : displayName.Trim()[0].ToString().ToUpperInvariant();
+
+    var currentController = (string?)ViewContext.RouteData.Values["controller"] ?? "";
+    var currentAction = (string?)ViewContext.RouteData.Values["action"] ?? "";
+
+    bool onDashboard    = string.Equals(currentController, "StudentDashboard", StringComparison.OrdinalIgnoreCase) && string.Equals(currentAction, "Index", StringComparison.OrdinalIgnoreCase);
+    bool onAssessment   = string.Equals(currentController, "StudentAssessment", StringComparison.OrdinalIgnoreCase) && string.Equals(currentAction, "Index", StringComparison.OrdinalIgnoreCase);
+    bool onResults      = string.Equals(currentController, "StudentResults", StringComparison.OrdinalIgnoreCase) && string.Equals(currentAction, "Index", StringComparison.OrdinalIgnoreCase);
+    bool onSettings     = string.Equals(currentController, "SettingsStudent", StringComparison.OrdinalIgnoreCase) && string.Equals(currentAction, "Index", StringComparison.OrdinalIgnoreCase);
+    bool onAchievements = string.Equals(currentController, "StudentAchievements", StringComparison.OrdinalIgnoreCase) && string.Equals(currentAction, "Index", StringComparison.OrdinalIgnoreCase);
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>@ViewData["Title"] - STRANDVENTURE</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/STRANDVENTURE.styles.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <!-- Font Awesome (for fa* icons used in views) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    @RenderSection("Styles", required: false)
+
+    <style>
+        :root { --portal-accent: #0f5aa6; --portal-accent-alt: #1565c0; }
+        /* Remove fixed 100% height to allow document to expand with content */
+        html { min-height: 100%; }
+        body { margin:0; display:flex; min-height:100vh; background-color:#f7f9fc; }
+
+        .student-sidebar { width:250px; background:linear-gradient(180deg,var(--portal-accent) 0%,var(--portal-accent-alt) 100%); color:#fff; display:flex; flex-direction:column; padding:1.25rem 1rem 1rem; /* Ensure it always reaches at least viewport height */ min-height:100vh; }
+        /* Allow sidebar to scroll independently if it becomes taller than viewport */
+        .student-sidebar { overflow-y:auto; scrollbar-width:thin; }
+        .student-sidebar::-webkit-scrollbar { width:8px; }
+        .student-sidebar::-webkit-scrollbar-track { background:rgba(255,255,255,.12); }
+        .student-sidebar::-webkit-scrollbar-thumb { background:rgba(255,255,255,.35); border-radius:4px; }
+
+        .student-brand { display:flex; align-items:center; gap:.75rem; margin-bottom:1.5rem; }
+        .avatar-circle { width:46px; height:46px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; background:rgba(255,255,255,.9); color:var(--portal-accent); font-size:1.1rem; font-weight:700; box-shadow:0 2px 6px rgba(0,0,0,.15); }
+        .portal-heading { font-size:1.15rem; font-weight:700; line-height:1.2; }
+        .student-menu { list-style:none; padding:0; margin:0 0 1rem; flex:1 1 auto; }
+        .student-menu li:not(:last-child){ margin-bottom:.35rem; }
+        .student-menu a { display:flex; align-items:center; gap:.6rem; text-decoration:none; font-weight:500; padding:.6rem .75rem; border-radius:.6rem; color:rgba(255,255,255,.85); background:rgba(255,255,255,0); transition:background-color .15s ease,color .15s ease; font-size:.95rem; }
+        .student-menu a:hover,.student-menu a:focus { background:rgba(255,255,255,.15); color:#fff; }
+        .student-menu a.active { background:#fff; color:var(--portal-accent); font-weight:600; box-shadow:0 2px 4px rgba(0,0,0,.15); }
+        .student-footer { font-size:.75rem; opacity:.75; text-align:center; margin-top:.75rem; }
+        .logout-btn { border:1px solid rgba(255,255,255,.5); background:rgba(255,255,255,.15); color:#fff; width:100%; padding:.55rem .75rem; font-size:.85rem; border-radius:.55rem; display:inline-flex; align-items:center; justify-content:center; gap:.4rem; font-weight:500; text-decoration:none; transition:background-color .15s ease, transform .15s ease, box-shadow .15s ease; }
+        .logout-btn:hover,.logout-btn:focus { background:#dc3545; border-color:#dc3545; box-shadow:0 4px 12px rgba(220,53,69,.35); transform:translateY(-2px); color:#fff; }
+        .logout-btn:active { transform:translateY(0); box-shadow:0 2px 6px rgba(220,53,69,.4) inset; }
+
+        .main-wrapper { flex:1 1 auto; display:flex; flex-direction:column; min-width:0; }
+        header.student-topbar { display:none; }
+        .content-container { padding:1.25rem 1.25rem 2.5rem; flex:1 1 auto; }
+        footer.student-footer-global { border-top:1px solid #e3e7ef; padding:.85rem 1.25rem; font-size:.85rem; color:#6c757d; background:#fff; }
+
+        /* Mobile */
+        @@media (max-width: 991.98px) {
+            body { flex-direction:column; }
+            .student-sidebar { position:fixed; top:0; left:0; bottom:0; transform:translateX(-101%); width:250px; z-index:1045; transition:transform .25s ease; box-shadow:4px 0 18px -4px rgba(0,0,0,.35); }
+            .student-sidebar.show { transform:translateX(0); }
+            header.student-topbar { display:flex; align-items:center; gap:.75rem; background:var(--portal-accent); color:#fff; padding:.65rem .9rem; box-shadow:0 2px 4px rgba(0,0,0,.15); }
+            .main-wrapper { width:100%; }
+            .sidebar-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1040; opacity:0; pointer-events:none; transition:opacity .25s ease; }
+            .sidebar-backdrop.show { opacity:1; pointer-events:all; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Mobile top bar -->
+    <header class="student-topbar">
+        <button class="btn btn-sm btn-light" id="sidebarToggle" aria-label="Toggle navigation">
+            <i class="bi bi-list"></i>
+        </button>
+        <strong>Student Portal</strong>
+        <div class="ms-auto d-flex align-items-center gap-2">
+            <span class="small">@displayName</span>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="student-sidebar" id="studentSidebar" aria-label="Student navigation">
+        <div class="student-brand">
+            <div class="avatar-circle">@initial</div>
+            <div>
+                <div class="portal-heading">Student Portal</div>
+                <div class="small" style="opacity:.75;">@displayName</div>
+            </div>
+        </div>
+
+        <ul class="student-menu">
+            <li>
+                <a class="@(onDashboard ? "active" : "")" asp-area="" asp-controller="StudentDashboard" asp-action="Index"><i class="bi bi-speedometer2"></i><span>Dashboard</span></a>
+            </li>
+            <li>
+                <a class="@(onAssessment ? "active" : "")" asp-area="" asp-controller="StudentAssessment" asp-action="Index"><i class="bi bi-clipboard-check"></i><span>Assessment</span></a>
+            </li>
+            <li>
+                <a class="@(onResults ? "active" : "")" asp-area="" asp-controller="StudentResults" asp-action="Index"><i class="bi bi-bar-chart-line"></i><span>Results</span></a>
+            </li>
+            <li>
+                <a class="@(onSettings ? "active" : "")" asp-area="" asp-controller="SettingsStudent" asp-action="Index"><i class="bi bi-gear"></i><span>Settings</span></a>
+            </li>
+            <li>
+                <a class="@(onAchievements ? "active" : "")" asp-area="" asp-controller="StudentAchievements" asp-action="Index"><i class="bi bi-trophy"></i><span>Achievements</span></a>
+            </li>
+        </ul>
+
+        <a asp-area="" asp-controller="Home" asp-action="LogoutStudent" class="logout-btn"><i class="bi bi-box-arrow-right"></i><span>Logout</span></a>
+        <div class="student-footer">&copy; 2025 STRANDVENTURE</div>
+    </aside>
+
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+    <!-- Main Content -->
+    <div class="main-wrapper">
+        <div class="content-container">
+            <main role="main" class="pb-3">
+                @RenderBody()
+            </main>
+        </div>
+        <footer class="student-footer-global">&copy; 2025 - STRANDVENTURE - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a></footer>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+
+    <script>
+        (function () {
+            const sidebar = document.getElementById('studentSidebar');
+            const toggle = document.getElementById('sidebarToggle');
+            const backdrop = document.getElementById('sidebarBackdrop');
+            function closeSidebar(){ sidebar.classList.remove('show'); backdrop.classList.remove('show'); }
+            function openSidebar(){ sidebar.classList.add('show'); backdrop.classList.add('show'); }
+            if(toggle){ toggle.addEventListener('click', ()=> sidebar.classList.contains('show') ? closeSidebar() : openSidebar()); }
+            if(backdrop){ backdrop.addEventListener('click', closeSidebar); }
+            document.addEventListener('keydown', e => { if(e.key==='Escape') closeSidebar(); });
+        })();
+    </script>
+</body>
+</html>

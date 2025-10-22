@@ -1,0 +1,76 @@
+@model StudentStrandQuizResultsViewModel
+@{
+    ViewData["Title"] = Model.QuizTitle + " - Results";
+    int shieldsLeft = ViewBag.ShieldsLeft ?? 0;
+    bool gainedShield = ViewBag.GainedShield == true;
+    double pct = Model.ScorePercent; // already 0-100 presumably
+    string perfClass = pct >= 90 ? "excellent" : pct >= 70 ? "good" : string.Empty;
+}
+@section Styles {
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="~/css/quiz-results.css" />
+}
+<div class="results-hero mb-4">
+    <h2 class="mb-2 fw-bold" style="line-height:1.1;">@Model.QuizTitle <span style="opacity:.6; font-weight:400; font-size:1rem;">Results</span></h2>
+    <p class="small mb-3" style="color:#b7d7e7;">Strand: <strong style="color:#fff;">@Model.StrandName</strong></p>
+    <div class="score-chip @perfClass" aria-label="Score summary">
+        <i class="fa-solid fa-chart-simple"></i>
+        <span>@Model.CorrectAnswers / @Model.TotalQuestions</span>
+        <span>(@pct.ToString("0.##")%)</span>
+    </div>
+    <div class="score-bar-wrap" aria-hidden="true">
+        <div class="score-bar" style="--score:@pct%">
+            <span style="width:@pct%"></span>
+        </div>
+    </div>
+    <div class="stat-grid">
+        <div class="stat-card">
+            <h6>Correct</h6>
+            <div class="stat-val text-success">@Model.CorrectAnswers</div>
+        </div>
+        <div class="stat-card">
+            <h6>Incorrect</h6>
+            <div class="stat-val text-danger">@(Model.TotalQuestions - Model.CorrectAnswers)</div>
+        </div>
+        <div class="stat-card">
+            <h6>Score %</h6>
+            <div class="stat-val">@pct.ToString("0.##")%</div>
+        </div>
+        <div class="stat-card">
+            <h6>Shields Left</h6>
+            <div class="stat-val shield-accent"><i class="fa-solid fa-shield-halved me-1"></i>@shieldsLeft</div>
+        </div>
+    </div>
+    @if(gainedShield){
+        <div class="badge-earned" role="status"><i class="fa-solid fa-burst"></i> Bonus shield earned on final streak!</div>
+    }
+</div>
+<div class="actions-row mb-4">
+    <a asp-controller="StudentResults" asp-action="Index" class="btn btn-outline-light text-dark"><i class="fa-solid fa-arrow-left-long me-1"></i> Back to Assessment Results</a>
+    <a asp-action="Retake" asp-route-quizId="@Model.QuizId" class="btn btn-primary"><i class="fa-solid fa-rotate-right me-1"></i> Retake (resets)</a>
+</div>
+@if(gainedShield){
+    <div class="toast-celebrate" id="celebrateToast"><i class="fa-solid fa-shield"></i><strong>Shield Bonus!</strong> Final streak reward.</div>
+}
+@section Scripts {
+<script>
+(function(){
+  // Confetti only if shield gained or excellent score
+  const gained = @(gainedShield.ToString().ToLower());
+  const excellent = @((pct >= 90).ToString().ToLower());
+  if(gained || excellent){
+     for(let i=0;i<48;i++){
+        const c=document.createElement('span');
+        c.className='confetti-piece';
+        c.style.setProperty('--x', (Math.random()*100)+'vw');
+        c.style.setProperty('--r', (Math.random()*360)+'deg');
+        c.style.setProperty('--c', ['#19c1b6','#1e88e5','#7b1fa2','#ffce3a','#ff6f61','#16a34a'][Math.floor(Math.random()*6)]);
+        document.body.appendChild(c);
+        setTimeout(()=>c.remove(), 2600);
+     }
+  }
+  const toast=document.getElementById('celebrateToast');
+  if(toast){ setTimeout(()=> toast.remove(), 4000); }
+})();
+</script>
+}

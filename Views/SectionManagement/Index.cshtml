@@ -1,0 +1,413 @@
+@{
+    Layout = "~/Views/Shared/_TeacherLayout.cshtml";
+    ViewData["Title"] = "Section Management";
+}
+@model STRANDVENTURE.Models.TeacherPortalViewModel
+
+<link rel="stylesheet" href="https://cdn.datatables.net/v/bs5/dt-2.0.0/datatables.min.css" />
+
+<div class="mt-3">
+    <div class="card shadow-sm">
+        <div class="card-header bg-white d-flex align-items-center gap-2">
+            <h5 class="mb-0">Sections</h5>
+            <div class="ms-auto d-flex align-items-center gap-2">
+                <button id="btnToggleFilters" class="btn btn-outline-secondary btn-sm" type="button" aria-pressed="false">
+                    <i class="bi bi-funnel me-1"></i> Filters
+                </button>
+                <button id="btnBulkDelete" class="btn btn-danger btn-sm">
+                    <i class="bi bi-trash me-1"></i>
+                    Bulk Delete
+                </button>
+                <button id="btnAddSection" class="btn btn-primary btn-sm">
+                    <i class="bi bi-plus-circle me-1"></i>
+                    Add Section
+                </button>
+                <button id="btnRefresh" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-clockwise me-1"></i>
+                    Refresh
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table id="sectionsTable" class="table table-striped table-hover align-middle" width="100%">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width:26px;"><input type="checkbox" id="selectAllRows"></th>
+                            <th style="width:40px;"></th>
+                            <th>Name</th>
+                            <th>Grade Level</th>
+                            <!-- <th>Teacher</th> -->
+                            <th>Status</th>
+                            <th>Created</th>
+                        </tr>
+                        <tr class="filters-row d-none">
+                            <th></th>
+                            <th></th>
+                            <th><input id="filterName" class="form-control form-control-sm" placeholder="Search name" /></th>
+                            <th><input id="filterGrade" type="number" min="0" class="form-control form-control-sm" placeholder="Grade" /></th>
+                            <!-- <th><input id="filterTeacher" class="form-control form-control-sm" placeholder="Teacher name" /></th> -->
+                            <th>
+                                <select id="filterStatus" class="form-select form-select-sm">
+                                    <option value="">All</option>
+                                    <option value="active">Active</option>
+                                    <option value="inactive">Inactive</option>
+                                </select>
+                            </th>
+                            <th><input id="filterCreated" class="form-control form-control-sm" placeholder="YYYY-MM" /></th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Section Modal -->
+<div class="modal fade" id="modalAddSection" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Add Section</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="formAddSection">
+          <div class="mb-3">
+            <label for="addName" class="form-label">Section Name</label>
+            <input type="text" class="form-control" id="addName" name="Name" maxlength="50" required>
+          </div>
+          <div class="mb-3">
+            <label for="addGradeLevel" class="form-label">Grade Level</label>
+            <input type="number" class="form-control" id="addGradeLevel" name="GradeLevel" value="10" readonly required>
+          </div>
+                    <!-- Teacher selection removed -->
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="addIsActive" name="IsActive" checked>
+            <label class="form-check-label" for="addIsActive">Active</label>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" id="btnSaveAdd" class="btn btn-primary">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Section Modal -->
+<div class="modal fade" id="modalEditSection" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Section</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="formEditSection">
+          <input type="hidden" id="editId">
+          <div class="mb-3">
+            <label for="editName" class="form-label">Section Name</label>
+            <input type="text" class="form-control" id="editName" name="Name" maxlength="50" required>
+          </div>
+          <div class="mb-3">
+            <label for="editGradeLevel" class="form-label">Grade Level</label>
+            <input type="number" class="form-control" id="editGradeLevel" name="GradeLevel" min="7" max="12" step="1" required>
+          </div>
+                    <!-- Teacher selection removed -->
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="editIsActive" name="IsActive">
+            <label class="form-check-label" for="editIsActive">Active</label>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" id="btnSaveEdit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script src="https://cdn.datatables.net/v/bs5/dt-2.0.0/datatables.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+(function() {
+    window.applyDataTablesDefaults && window.applyDataTablesDefaults();
+
+    const table = new DataTable('#sectionsTable', {
+        ajax: {
+            url: '@Url.Action("ListSections", "SectionManagement")',
+            dataSrc: 'data'
+        },
+        pageLength: 10,
+        lengthMenu: [10, 25, 50, 100],
+        ordering: true,
+        searching: true,
+        columns: [
+            { data: null, orderable:false, className:'text-center', render: (_, __, row)=>`<input type="checkbox" class="row-select" data-id="${row.id}">` },
+            { data: null, orderable: false, render: renderActions },
+            { data: 'name' },
+            { data: 'gradeLevel' },
+            // { data: 'teacherName', defaultContent: '' },
+            { data: 'isActive', render: renderStatus },
+            { data: 'createdAt', render: renderDateTime }
+        ]
+    });
+
+    function renderActions(_, type, row) {
+        const id = row.id;
+        return `
+<div class="dropdown">
+  <button class="btn btn-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+    Actions
+  </button>
+  <ul class="dropdown-menu">
+    <li><a class="dropdown-item" href="#" data-action="edit" data-id="${id}"><i class="bi bi-pencil-square me-1"></i>Edit</a></li>
+    <li><a class="dropdown-item text-danger" href="#" data-action="delete" data-id="${id}"><i class="bi bi-trash me-1"></i>Delete</a></li>
+  </ul>
+</div>`;
+    }
+
+    function renderStatus(value) {
+        const on = value === true || value === 'true';
+        return on ? '<span class="badge bg-success">Active</span>'
+                  : '<span class="badge bg-secondary">Inactive</span>';
+    }
+    function renderDateTime(value) {
+        if (!value) return '';
+        const d = new Date(value);
+        if (isNaN(d)) return '';
+        return d.toLocaleString();
+    }
+
+    // Inline filters
+    const filterName = document.getElementById('filterName');
+    const filterGrade = document.getElementById('filterGrade');
+    // const filterTeacher = document.getElementById('filterTeacher');
+    const filterStatus = document.getElementById('filterStatus');
+    const filterCreated = document.getElementById('filterCreated');
+    const filtersRow = document.querySelector('#sectionsTable thead tr.filters-row');
+    const toggleBtn = document.getElementById('btnToggleFilters');
+
+    function norm(v){return (v||'').toString().toLowerCase();}
+
+    DataTable.ext.search.push(function(settings, data, dataIndex){
+        if(settings.nTable !== document.getElementById('sectionsTable')) return true;
+        const row = table.row(dataIndex).data() || {};
+        if(filterName.value && !norm(row.name).includes(norm(filterName.value))) return false;
+        if(filterGrade.value){
+            const g = parseInt(filterGrade.value,10);
+            if((row.gradeLevel||0) !== g) return false;
+        }
+    // if(filterTeacher.value && !norm(row.teacherName).includes(norm(filterTeacher.value))) return false;
+        if(filterStatus.value){
+            const st = row.isActive? 'active':'inactive';
+            if(st !== filterStatus.value) return false;
+        }
+        if(filterCreated.value){
+            // match YYYY-MM
+            const d = new Date(row.createdAt);
+            if(!isNaN(d)){
+                const ym = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+                if(ym !== filterCreated.value) return false;
+            }
+        }
+        return true;
+    });
+
+    ['input','change'].forEach(evt=>{
+        filterName.addEventListener(evt, ()=> table.draw());
+        filterGrade.addEventListener(evt, ()=> table.draw());
+        // filterTeacher.addEventListener(evt, ()=> table.draw());
+        filterStatus.addEventListener(evt, ()=> table.draw());
+        filterCreated.addEventListener(evt, ()=> table.draw());
+    });
+
+    function setFiltersVisible(show){
+        if(show){ filtersRow.classList.remove('d-none'); toggleBtn.classList.add('active'); toggleBtn.setAttribute('aria-pressed','true'); }
+        else { filtersRow.classList.add('d-none'); toggleBtn.classList.remove('active'); toggleBtn.setAttribute('aria-pressed','false'); }
+        try{ localStorage.setItem('sections_filters_visible', show? '1':'0'); }catch{}
+    }
+    toggleBtn.addEventListener('click', ()=> setFiltersVisible(filtersRow.classList.contains('d-none')) );
+    const saved = (typeof localStorage !== 'undefined')? localStorage.getItem('sections_filters_visible'):null;
+    setFiltersVisible(saved==='1');
+
+    // Teacher loading removed
+
+    document.getElementById('btnAddSection').addEventListener('click', function() {
+        document.getElementById('formAddSection').reset();
+        document.getElementById('addGradeLevel').value = 10;
+        document.getElementById('addIsActive').checked = true;
+        new bootstrap.Modal('#modalAddSection').show();
+    });
+    document.getElementById('btnRefresh').addEventListener('click', function() {
+        table.ajax.reload(null, false);
+    });
+
+    document.getElementById('sectionsTable').addEventListener('click', async function(e) {
+        const a = e.target.closest('a[data-action]');
+        if (!a) return;
+        e.preventDefault();
+        const action = a.getAttribute('data-action');
+        const tr = e.target.closest('tr');
+        const row = table.row(tr).data();
+        if (!row) return;
+
+        if (action === 'edit') {
+            await openEditModal(row);
+        } else if (action === 'delete') {
+            // Pre-check dependency for single id
+            const confirmDlg = await Swal.fire({
+                icon:'warning', title:'Delete this section?', text:'This action cannot be undone.', showCancelButton:true, confirmButtonText:'Delete', cancelButtonText:'Cancel'
+            });
+            if(!confirmDlg.isConfirmed) return;
+
+            const check = await fetch('@Url.Action("CanDeleteSections","SectionManagement")', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ ids: [row.id] }) });
+            const cj = await check.json().catch(()=>({}));
+            if(!check.ok){ await Swal.fire({ icon:'error', title:'Failed', text: cj.message || 'Unable to check dependencies.' }); return; }
+            if((cj.inUse||[]).length){
+                const reason = cj.inUse[0]?.reason || 'Section has dependencies.';
+                await Swal.fire({ icon:'warning', title:'Cannot delete', text: reason });
+                return;
+            }
+            await doDelete(row.id);
+        }
+    });
+
+    async function openEditModal(row) {
+        document.getElementById('editId').value = row.id;
+        document.getElementById('editName').value = row.name;
+        document.getElementById('editGradeLevel').value = row.gradeLevel;
+        document.getElementById('editIsActive').checked = row.isActive === true;
+        new bootstrap.Modal('#modalEditSection').show();
+    }
+
+    async function doDelete(id) {
+        try {
+            const res = await fetch('@Url.Action("DeleteSection","SectionManagement")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(id)
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                await Swal.fire({ icon:'error', title:'Failed', text: err.message || 'Failed to delete section.' });
+                return;
+            }
+            await Swal.fire({ icon:'success', title:'Deleted', timer:1400, showConfirmButton:false });
+            table.ajax.reload(null, false);
+        } catch {
+            await Swal.fire({ icon:'error', title:'Failed', text:'Failed to delete section.' });
+        }
+    }
+
+    // Selection helpers
+    const selectAll = document.getElementById('selectAllRows');
+    selectAll.addEventListener('change', ()=>{
+        document.querySelectorAll('#sectionsTable tbody input.row-select').forEach(cb=>{ cb.checked = selectAll.checked; });
+    });
+    function getSelectedIds(){
+        return Array.from(document.querySelectorAll('#sectionsTable tbody input.row-select:checked')).map(x=>x.getAttribute('data-id'));
+    }
+
+    // Bulk delete with pre-check
+    document.getElementById('btnBulkDelete').addEventListener('click', async ()=>{
+        const ids = getSelectedIds();
+        if(ids.length===0){ await Swal.fire({ icon:'info', title:'No selection', text:'Select at least one section.' }); return; }
+        const confirmDlg = await Swal.fire({ icon:'warning', title:`Delete ${ids.length} selected section(s)?`, text:'This action cannot be undone.', showCancelButton:true, confirmButtonText:'Continue', cancelButtonText:'Cancel' });
+        if(!confirmDlg.isConfirmed) return;
+
+        try{
+            const check = await fetch('@Url.Action("CanDeleteSections","SectionManagement")', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ ids }) });
+            const cj = await check.json().catch(()=>({}));
+            if(!check.ok){ await Swal.fire({ icon:'error', title:'Failed', text: cj.message || 'Unable to check dependencies.' }); return; }
+            const blocked = (cj.inUse||[]);
+            const allowed = (cj.ok||[]);
+            if(allowed.length===0){
+                const reasons = blocked.map(b=>`� ${b.id}: ${b.reason||'in use'}`).join('<br/>');
+                await Swal.fire({ icon:'warning', title:'No deletions performed', html:`<div class="text-start">Some items are in use:<br/>${reasons}</div>` });
+                return;
+            }
+            if(blocked.length){
+                const reasons = blocked.map(b=>`� ${b.id}: ${b.reason||'in use'}`).join('<br/>');
+                const proceed = await Swal.fire({ icon:'warning', title:'Some items cannot be deleted', html:`<div class="text-start mb-2">The following will be skipped:<br/>${reasons}</div><div>Proceed deleting the rest?</div>`, showCancelButton:true, confirmButtonText:'Delete allowed', cancelButtonText:'Cancel' });
+                if(!proceed.isConfirmed) return;
+            }
+            const res = await fetch('@Url.Action("BulkDeleteSections","SectionManagement")',{
+                method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ ids: allowed })
+            });
+            const j = await res.json().catch(()=>({}));
+            if(!res.ok){ await Swal.fire({ icon:'error', title:'Failed', text: j.message || 'Bulk delete failed.' }); return; }
+            let msg = `Deleted: ${j.deleted}`;
+            if(blocked.length){ msg += `\nBlocked: ${blocked.length}`; }
+            if((j.notFound||[]).length){ msg += `\nNot Found: ${j.notFound.length}`; }
+            if(j.errors && j.errors.length){ msg += `\nErrors: ${j.errors.join(', ')}`; }
+            await Swal.fire({ icon:'success', title:'Done', html:`<pre class="text-start mb-0">${msg}</pre>` });
+            selectAll.checked = false;
+            table.ajax.reload(null,false);
+        }catch{ await Swal.fire({ icon:'error', title:'Failed', text:'Bulk delete failed.' }); }
+    });
+
+    document.getElementById('btnSaveAdd').addEventListener('click', async function() {
+        const form = document.getElementById('formAddSection');
+        if (!form.reportValidity()) return;
+
+        const payload = {
+            name: document.getElementById('addName').value.trim(),
+            gradeLevel: parseInt(document.getElementById('addGradeLevel').value, 10),
+            isActive: document.getElementById('addIsActive').checked
+        };
+
+        try {
+            const res = await fetch('@Url.Action("CreateSection","SectionManagement")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                await Swal.fire({ icon:'error', title:'Failed', text: err.message || 'Failed to create section.' });
+                return;
+            }
+            bootstrap.Modal.getInstance(document.getElementById('modalAddSection')).hide();
+            table.ajax.reload(null, false);
+        } catch {
+            await Swal.fire({ icon:'error', title:'Failed', text:'Failed to create section.' });
+        }
+    });
+
+    document.getElementById('btnSaveEdit').addEventListener('click', async function() {
+        const form = document.getElementById('formEditSection');
+        if (!form.reportValidity()) return;
+
+        const payload = {
+            id: document.getElementById('editId').value,
+            name: document.getElementById('editName').value.trim(),
+            gradeLevel: parseInt(document.getElementById('editGradeLevel').value, 10),
+            isActive: document.getElementById('editIsActive').checked
+        };
+
+        try {
+            const res = await fetch('@Url.Action("UpdateSection","SectionManagement")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                await Swal.fire({ icon:'error', title:'Failed', text: err.message || 'Failed to update section.' });
+                return;
+            }
+            bootstrap.Modal.getInstance(document.getElementById('modalEditSection')).hide();
+            table.ajax.reload(null, false);
+        } catch {
+            await Swal.fire({ icon:'error', title:'Failed', text:'Failed to update section.' });
+        }
+    });
+})();
+</script>
+}

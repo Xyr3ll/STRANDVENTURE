@@ -1,0 +1,197 @@
+@model TeacherPortalViewModel
+@{
+    Layout = "~/Views/Shared/_TeacherLayout.cshtml";
+    ViewData["Title"] = "Strand Quizzes";
+    var strandId = (Guid)ViewData["StrandId"]; // injected
+    var strandName = (string)ViewData["StrandName"];
+}
+<link rel="stylesheet" href="https://cdn.datatables.net/v/bs5/dt-2.0.0/datatables.min.css" />
+<div class="mt-3">
+  <div class="card shadow-sm">
+    <div class="card-header bg-white d-flex flex-wrap align-items-center gap-2">
+      <h5 class="mb-0">Quizzes for: <span class="text-primary">@strandName</span></h5>
+      <div class="ms-auto d-flex gap-2 align-items-center">
+        <a class="btn btn-outline-secondary btn-sm" href="@Url.Action("Index","StrandManagement")"><i class="bi bi-arrow-left me-1"></i>Back to Strands</a>
+        <button id="btnAddQuiz" class="btn btn-primary btn-sm"><i class="bi bi-plus-circle me-1"></i>Add Quiz</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="table-responsive">
+        <table id="quizTable" class="table table-striped table-hover align-middle" width="100%">
+          <thead class="table-light">
+            <tr>
+              <th style="width:40px;"></th>
+              <th>Title</th>
+              <th>Description</th>
+              <th>Questions</th>
+              <th>Time (min)</th>
+              <th>Random</th>
+              <th>Status</th>
+              <th>Live</th>
+              <th>Created</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal fade" id="modalQuiz" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalQuizTitle">Add Quiz</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="formQuiz">
+          <input type="hidden" id="quizId" />
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Title</label>
+              <input type="text" id="quizTitle" class="form-control" maxlength="120" required />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Time Limit (minutes, optional)</label>
+              <input type="number" id="quizTime" class="form-control" min="1" />
+            </div>
+            <div class="col-12">
+              <label class="form-label">Description</label>
+              <textarea id="quizDescription" class="form-control" maxlength="300"></textarea>
+            </div>
+            <div class="col-md-3 form-check ms-2">
+              <input class="form-check-input" type="checkbox" id="quizRandQ" checked />
+              <label class="form-check-label" for="quizRandQ">Randomize Questions</label>
+            </div>
+            <div class="col-md-3 form-check ms-2">
+              <input class="form-check-input" type="checkbox" id="quizRandO" checked />
+              <label class="form-check-label" for="quizRandO">Randomize Options</label>
+            </div>
+            <div class="col-md-2 form-check ms-2">
+              <input class="form-check-input" type="checkbox" id="quizActive" checked />
+              <label class="form-check-label" for="quizActive">Active</label>
+            </div>
+            <div class="col-md-2 form-check ms-2">
+              <input class="form-check-input" type="checkbox" id="quizLive" />
+              <label class="form-check-label" for="quizLive">Live</label>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button id="btnSaveQuiz" class="btn btn-primary">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script src="https://cdn.datatables.net/v/bs5/dt-2.0.0/datatables.min.js"></script>
+<script>
+(function(){
+  const strandId = '@strandId';
+  const table = new DataTable('#quizTable', {
+    ajax: { url: '@Url.Action("List","StrandQuizManagement")?strandId='+strandId, dataSrc: 'data' },
+    pageLength: 10,
+    columns: [
+      { data: null, orderable:false, className:'text-start', render: actionMenu },
+      { data: 'title' },
+      { data: 'description', render: v => v||'' },
+      { data: 'totalQuestions', render: (v,r)=> `<a href='@Url.Action("Questions","StrandQuizManagement")?quizId=${'PLACE'}' class='text-decoration-none fw-semibold'>${v}</a>` },
+      { data: 'timeLimitSeconds', render: v => v? Math.ceil(v/60) : '-' },
+      { data: null, render: r => `${r.randomizeQuestions?'<span class=\'badge bg-info-subtle text-info-emphasis\'>Q</span>':''} ${r.randomizeOptions?'<span class=\'badge bg-primary-subtle text-primary-emphasis\'>O</span>':''}` },
+      { data: 'isActive', render: v => v? '<span class="badge bg-success">Active</span>':'<span class="badge bg-secondary">Inactive</span>' },
+      { data: 'isLive', render: v => v? '<span class="badge bg-warning text-dark">LIVE</span>':'-' },
+      { data: 'createdAt', render: v => new Date(v).toLocaleDateString() }
+    ],
+    createdRow: (row,data)=>{
+      // patch questions link
+      const cell = row.querySelector('td:nth-child(4) a');
+      if(cell){ cell.href = '@Url.Action("Questions","StrandQuizManagement")?quizId='+data.id; cell.textContent = data.totalQuestions; }
+    }
+  });
+
+  function actionMenu(_, __, row){
+    return `<div class=\"dropdown\">
+  <button class=\"btn btn-light btn-sm dropdown-toggle\" data-bs-toggle=\"dropdown\">Actions</button>
+  <ul class=\"dropdown-menu\">
+    <li><a class=\"dropdown-item\" href=\"#\" data-act=\"edit\" data-id=\"${row.id}\"><i class=\"bi bi-pencil-square me-1\"></i>Edit</a></li>
+    <li><a class=\"dropdown-item\" href=\"@Url.Action("Questions","StrandQuizManagement")?quizId=${row.id}\"><i class=\"bi bi-list-check me-1\"></i>Questions</a></li>
+    <li><a class=\"dropdown-item\" href=\"#\" data-act=\"setlive\" data-id=\"${row.id}\"><i class=\"bi bi-broadcast-pin me-1\"></i>Set Live</a></li>
+    <li><hr class=\"dropdown-divider\"/></li>
+    <li><a class=\"dropdown-item text-danger\" href=\"#\" data-act=\"delete\" data-id=\"${row.id}\"><i class=\"bi bi-trash me-1\"></i>Delete</a></li>
+  </ul>
+</div>`;
+  }
+
+  document.getElementById('btnAddQuiz').addEventListener('click', ()=>{
+    document.getElementById('formQuiz').reset();
+    document.getElementById('quizId').value='';
+    document.getElementById('quizRandQ').checked = true;
+    document.getElementById('quizRandO').checked = true;
+    document.getElementById('quizActive').checked = true;
+    document.getElementById('quizLive').checked = false;
+    document.getElementById('modalQuizTitle').textContent='Add Quiz';
+    new bootstrap.Modal('#modalQuiz').show();
+  });
+
+  document.getElementById('quizTable').addEventListener('click', async e => {
+    const a = e.target.closest('a[data-act]');
+    if(!a) return; e.preventDefault();
+    const act = a.getAttribute('data-act');
+    const row = table.row(a.closest('tr')).data();
+    if(!row) return;
+    if(act==='edit') openEdit(row);
+    if(act==='setlive') {
+      if(confirm('Set this quiz as the live quiz for the strand?')){
+        const res = await fetch('@Url.Action("SetLive","StrandQuizManagement")?id='+row.id,{method:'POST'});
+        if(res.ok) table.ajax.reload(null,false); else alert('Failed to set live');
+      }
+    }
+    if(act==='delete') {
+      if(confirm('Delete this quiz?')){
+        const res = await fetch('@Url.Action("Delete","StrandQuizManagement")?id='+row.id,{method:'DELETE'});
+        if(res.ok) table.ajax.reload(null,false); else alert('Delete failed');
+      }
+    }
+  });
+
+  function openEdit(row){
+    document.getElementById('modalQuizTitle').textContent='Edit Quiz';
+    quizId.value=row.id;
+    quizTitle.value=row.title;
+    quizDescription.value=row.description||'';
+    quizTime.value=row.timeLimitSeconds? Math.ceil(row.timeLimitSeconds/60):'';
+    quizRandQ.checked=row.randomizeQuestions;
+    quizRandO.checked=row.randomizeOptions;
+    quizActive.checked=row.isActive;
+    quizLive.checked=row.isLive;
+    new bootstrap.Modal('#modalQuiz').show();
+  }
+
+  document.getElementById('btnSaveQuiz').addEventListener('click', async ()=>{
+    const id = quizId.value;
+    const payload = {
+      strandId: strandId,
+      id: id||undefined,
+      title: quizTitle.value.trim(),
+      description: quizDescription.value.trim(),
+      timeLimitSeconds: quizTime.value? parseInt(quizTime.value,10)*60 : null,
+      randomizeQuestions: quizRandQ.checked,
+      randomizeOptions: quizRandO.checked,
+      isActive: quizActive.checked,
+      isLive: quizLive.checked
+    };
+    if(!payload.title) return alert('Title required');
+    const create = !id;
+    const url = create? '@Url.Action("Create","StrandQuizManagement")' : '@Url.Action("Update","StrandQuizManagement")';
+    const res = await fetch(url,{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+    if(res.ok){ bootstrap.Modal.getInstance(document.getElementById('modalQuiz')).hide(); table.ajax.reload(null,false);} else { const err = await res.json().catch(()=>({})); alert(err.message||'Save failed'); }
+  });
+})();
+</script>
+}

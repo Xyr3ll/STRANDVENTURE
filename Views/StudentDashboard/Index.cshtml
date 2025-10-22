@@ -1,0 +1,137 @@
+﻿@model StudentDashboardViewModel
+@{
+    ViewData["Title"] = "Dashboard";
+    var firstName = (Model.Student.Name ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault() ?? Model.Student.Name;
+}
+<style>
+    .sd-welcome-card, .sd-info-card, .sd-strands-card { border-radius: 14px; background:#fff; box-shadow:0 2px 4px rgba(0,0,0,.06); }
+    .sd-welcome-card { padding:1.75rem 1.5rem; }
+    .sd-info-card { padding:1.25rem 1.2rem; height:100%; }
+    .sd-strands-card { padding:1.25rem 1.2rem; }
+    .strand-pill { display:inline-block; border:1px solid #0f5aa6; color:#0f5aa6; padding:.35rem .9rem; border-radius:999px; font-weight:600; font-size:.85rem; margin:.25rem .4rem .25rem 0; background:#fff; }
+    .strand-pill:hover { background:#0f5aa6; color:#fff; text-decoration:none; }
+
+    /* Enhanced primary assessment CTA */
+    .btn-assessment-main { 
+        position:relative; 
+        background:linear-gradient(90deg,#0f5aa6 0%, #1478e1 50%, #0f5aa6 100%);
+        background-size:200% 100%;
+        border:none; 
+        color:#fff; 
+        font-weight:600; 
+        letter-spacing:.3px;
+        padding:.8rem 1.55rem; 
+        border-radius:12px; 
+        box-shadow:0 4px 12px -2px rgba(15,90,166,.45); 
+        display:inline-flex; 
+        align-items:center; 
+        gap:.55rem; 
+        transition:background-position .5s ease, box-shadow .25s ease, transform .25s ease;
+    }
+    .btn-assessment-main i { font-size:1.1rem; }
+    .btn-assessment-main:hover, .btn-assessment-main:focus { 
+        background-position:100% 0; 
+        box-shadow:0 8px 22px -6px rgba(15,90,166,.55), 0 0 0 3px rgba(20,120,225,.25); 
+        transform:translateY(-3px); 
+        color:#fff; 
+        text-decoration:none;
+    }
+    .btn-assessment-main:active { transform:translateY(-1px); box-shadow:0 5px 14px -4px rgba(15,90,166,.55); }
+    .btn-assessment-main::after { 
+        content:""; 
+        position:absolute; 
+        inset:0; 
+        border-radius:inherit; 
+        background:radial-gradient(circle at 30% 30%, rgba(255,255,255,.35), transparent 60%); 
+        mix-blend-mode:overlay; 
+        pointer-events:none; 
+    }
+
+    .btn-outline-primary { border-radius:12px; padding:.8rem 1.3rem; font-weight:600; }
+</style>
+<h2 class="fw-bold mb-4">Student Dashboard</h2>
+<div class="sd-welcome-card mb-4">
+    <h4 class="fw-bold mb-1">Welcome, @firstName!</h4>
+    <p class="text-muted mb-3">Ready to discover which senior high school strand aligns with your interests and strengths?</p>
+    <div class="d-flex flex-wrap gap-2">
+        <a asp-controller="StudentAssessment" asp-action="Index" class="btn btn-assessment-main">
+            <i class="bi bi-stars"></i><span>Take Assessment</span>
+        </a>
+        <a asp-controller="StudentResults" asp-action="Index" class="btn btn-outline-primary">View Your Results</a>
+    </div>
+</div>
+<div class="row g-4 mb-4">
+    <div class="col-12 col-md-6">
+        <div class="sd-info-card">
+            <h6 class="fw-bold">What is StrandQuest?</h6>
+            <p class="mb-0 small">StrandQuest is an interactive assessment that helps you identify which senior high school strand is most compatible with your interests, behavior, strengths, and weaknesses.</p>
+        </div>
+    </div>
+    <div class="col-12 col-md-6">
+        <div class="sd-info-card">
+            <h6 class="fw-bold">How it Works</h6>
+            <p class="mb-0 small">Answer fun game-based questions about your preferences and skills. Our system will analyze your responses and recommend the best academic strand for your future.</p>
+        </div>
+    </div>
+</div>
+<div class="sd-strands-card">
+    <h6 class="fw-bold mb-3">Available Strands</h6>
+    @if (!Model.Strands.Any()) {
+        <p class="text-muted small mb-0">No strands available.</p>
+    } else {
+        <div>
+            @foreach (var s in Model.Strands) {
+                <span class="strand-pill">@s.Name</span>
+            }
+        </div>
+    }
+</div>
+@if ((bool?)ViewData["ShowNotifyAssessmentModal"] == true) {
+    <div class="modal fade" id="assessmentNotifyModal" tabindex="-1" aria-labelledby="assessmentNotifyLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="assessmentNotifyLabel"><i class="bi bi-bell-fill text-warning me-1"></i> Assessment Reminder</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-2">Your teacher has reminded you to take the StrandQuest assessment.</p>
+                    <p class="small text-muted mb-0">Click Continue to dismiss this reminder and start the assessment when you are ready.</p>
+                </div>
+                <div class="modal-footer">
+                    <a asp-controller="StudentAssessment" asp-action="Index" class="btn btn-primary" id="btnGoAssessment">Take Assessment</a>
+                    <button type="button" class="btn btn-outline-secondary" id="btnNotifyDismiss">Continue</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+<script>
+(function(){
+    const showNotify = '@((bool?)ViewData["ShowNotifyAssessmentModal"] == true ? "true" : "false" )';
+    if(showNotify === 'true'){
+        const modalEl = document.getElementById('assessmentNotifyModal');
+        if(modalEl){
+            const bsModal = new bootstrap.Modal(modalEl,{backdrop:'static',keyboard:false});
+            const clearAndClose = async ()=>{
+                try { await fetch('@Url.Action("ClearAssessmentNotifications","StudentDashboard")',{ method:'POST' }); } catch { }
+                bsModal.hide();
+            };
+            modalEl.addEventListener('shown.bs.modal',()=>{
+                const dismissBtn=document.getElementById('btnNotifyDismiss');
+                if(dismissBtn){
+                    dismissBtn.addEventListener('click', e=>{ e.preventDefault(); clearAndClose(); });
+                }
+                const goBtn=document.getElementById('btnGoAssessment');
+                if(goBtn){
+                    goBtn.addEventListener('click', ()=>{ clearAndClose(); });
+                }
+            });
+            bsModal.show();
+        }
+    }
+})();
+</script>
+}

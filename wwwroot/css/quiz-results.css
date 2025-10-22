@@ -1,0 +1,26 @@
+/* Quiz Results Styling */
+.results-hero {background:radial-gradient(circle at 30% 30%, #12395f, #071726 70%); color:#d2e9f7; padding:1.9rem 1.75rem 1.6rem; border-radius:28px; position:relative; overflow:hidden; box-shadow:0 10px 28px -8px #000a;}
+.results-hero:before, .results-hero:after {content:""; position:absolute; width:320px; height:320px; background:linear-gradient(145deg,#1e88e5,#19c1b6); border-radius:50%; filter:blur(70px); opacity:.18; animation:resOrbs 26s linear infinite;}
+.results-hero:after {top:auto; bottom:-140px; right:-140px; animation-direction:reverse;}
+.results-hero:before {top:-140px; left:-140px;}
+@keyframes resOrbs {0%{transform:rotate(0deg);} 100%{transform:rotate(360deg);} }
+.score-chip {display:inline-flex; align-items:center; gap:.45rem; background:#0d2537; padding:.55rem .85rem; border-radius:14px; font-size:.85rem; font-weight:600; letter-spacing:.5px; border:1px solid #12374e;}
+.score-chip.good {background:#0d4221; border-color:#15733a; color:#bff6d4;}
+.score-chip.excellent {background:#11406b; border-color:#1f7ad1; color:#bfe6ff;}
+.score-bar-wrap {margin-top:.9rem;}
+.score-bar {height:14px; background:#0c2231; border-radius:8px; overflow:hidden; box-shadow:0 0 0 1px #124156 inset; position:relative;}
+.score-bar span {display:block; height:100%; width:0; background:linear-gradient(90deg,#19c1b6,#1e88e5); animation:fillScore 1.1s ease forwards;}
+@keyframes fillScore {from{width:0;} to{width:var(--score);} }
+.stat-grid {display:grid; gap:1rem; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); margin:1.4rem 0 1.2rem;}
+.stat-card {background:#0d2537; padding:.9rem 1rem; border-radius:16px; border:1px solid #12374e; position:relative; overflow:hidden;}
+.stat-card h6 {font-size:.65rem; text-transform:uppercase; letter-spacing:1.3px; margin:0 0 .45rem; color:#6abed4; font-weight:700;}
+.stat-val {font-size:1.35rem; font-weight:600; line-height:1; color:#fff;}
+.shield-accent {color:#19c1b6;}
+.actions-row {display:flex; flex-wrap:wrap; gap:.75rem;}
+.actions-row .btn {border-radius:12px; font-weight:600; letter-spacing:.4px;}
+.badge-earned {background:#0d4221; color:#c6f7d8; padding:.55rem .75rem; border:1px solid #1a7d43; display:inline-flex; align-items:center; gap:.4rem; border-radius:12px; font-size:.7rem; text-transform:uppercase; letter-spacing:1px; font-weight:600;}
+.toast-celebrate {position:fixed; top:22px; left:50%; transform:translateX(-50%); background:#0b2036; color:#fff; padding:.75rem 1rem; border-radius:14px; font-size:.8rem; display:flex; gap:.55rem; align-items:center; box-shadow:0 6px 20px -6px #000a; animation:fadeSlide .5s ease; z-index:1100;}
+@keyframes fadeSlide {from{opacity:0; transform:translate(-50%,-12px);} to{opacity:1; transform:translate(-50%,0);} }
+.confetti-piece {position:fixed; width:9px; height:9px; background:var(--c); top:-12px; left:var(--x); transform:rotate(var(--r)); animation:fallRes 2.6s linear forwards; border-radius:2px; z-index:1050;}
+@keyframes fallRes {to { transform:translateY(100vh) rotate(calc(var(--r) + 360deg)); opacity:0; }}
+@media (prefers-reduced-motion: reduce) { .score-bar span, .results-hero:before, .results-hero:after, .confetti-piece {animation:none;} }

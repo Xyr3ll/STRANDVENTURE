@@ -1,0 +1,135 @@
+﻿@model STRANDVENTURE.Controllers.TeacherDashboardController.TeacherDashboardViewModel
+
+@{
+    ViewData["Title"] = "Teacher Dashboard";
+    Layout = "_TeacherLayout";
+    // Prepare JSON for chart
+    var strandDataJson = System.Text.Json.JsonSerializer.Serialize(Model.StrandDistribution.Select(s => new { s.Name, s.Percent, s.Color, s.Count }));
+}
+
+<style>
+    /* Make strands chart a bit smaller */
+    .strands-chart-container { display:flex; justify-content:center; align-items:center; padding:.5rem 0; }
+    #strandsChart { width:260px !important; height:260px !important; max-width:100%; aspect-ratio:1/1; }
+    @@media (max-width:575.98px){ #strandsChart { width:240px !important; height:240px !important; } }
+</style>
+
+<div class="container-fluid py-3">
+    <div class="row g-3">
+        <!-- Charts Row -->
+        <div class="col-12 col-lg-7">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title mb-1">Students' Top Recommended Strands</h5>
+                    <p class="text-muted small mb-3">Distribution of top recommended strands across all sections</p>
+                    <div class="strands-chart-container">
+                        @if (Model.StrandDistribution.Any()) {
+                            <canvas id="strandsChart" aria-label="Top Recommended Strands" role="img"></canvas>
+                        } else {
+                            <div class="text-muted small">No honored results yet.</div>
+                        }
+                    </div>
+                    @if (Model.StrandDistribution.Any()) {
+                        <div class="row g-2 mt-2">
+                            @foreach (var s in Model.StrandDistribution) {
+                                <div class="col-6 col-md-4 col-xl-3">
+                                    <div class="d-flex align-items-center gap-2 small" style="line-height:1.1;">
+                                        <span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:@s.Color;"></span>
+                                        <span>@s.Name (@s.Percent.ToString("0.0")% - @s.Count)</span>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-5">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title mb-1">Assessment Progress</h5>
+                    <p class="text-muted small mb-3">Students who have completed their assessments</p>
+
+                    @if (Model.SectionsProgress.Count == 0)
+                    {
+                        <div class="text-muted">No sections found.</div>
+                    }
+                    else
+                    {
+                        foreach (var s in Model.SectionsProgress)
+                        {
+                            <div class="d-flex justify-content-between">
+                                <span class="fw-semibold">@s.SectionName</span>
+                                <span class="text-muted small">@s.Completed/@s.Total students</span>
+                            </div>
+                            <div class="progress mb-3" role="progressbar" aria-valuenow="@s.CompletionRate" aria-valuemin="0" aria-valuemax="100">
+                                <div class="progress-bar bg-primary" style="width: @s.CompletionRate%"></div>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Widgets Row -->
+        <div class="col-12 col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">Total Students</h5>
+                    <div class="d-flex align-items-end gap-3 flex-grow-1">
+                        <div class="display-5 fw-bold">@Model.TotalStudents</div>
+                    </div>
+                    <div class="text-muted small">Enrolled across @Model.TotalSections sections</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">Completed Assessments</h5>
+                    <div class="d-flex align-items-end gap-3 flex-grow-1">
+                        <div class="display-5 fw-bold">@Model.CompletedAssessments</div>
+                        <div class="text-success fw-semibold">@Model.CompletionRate% completion rate</div>
+                    </div>
+                    <div class="text-muted small">@Model.CompletedAssessments completed / @Model.TotalStudents students</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">Pending Assessments</h5>
+                    <div class="d-flex align-items-end gap-3 flex-grow-1">
+                        <div class="display-5 fw-bold">@Model.PendingAssessments</div>
+                    </div>
+                    <div class="text-muted small">Need to complete assessment</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', function () {
+            if (!window.Chart) return;
+            var rawData = @Html.Raw(strandDataJson);
+            if(!rawData || !rawData.length) return;
+            const strandsCtx = document.getElementById('strandsChart');
+            if(!strandsCtx) return;
+            const labels = rawData.map(x => `${x.Percent.toFixed(1)}% ${x.Name}`);
+            const counts = rawData.map(x => x.Count);
+            const colors = rawData.map(x => x.Color);
+            const total = counts.reduce((a,b)=>a+b,0) || 1;
+            new Chart(strandsCtx, {
+                type: 'pie',
+                data: { labels: labels, datasets: [{ data: counts, borderWidth: 1, backgroundColor: colors }] },
+                options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: ctx => { const raw = ctx.parsed || 0; const pct = ((raw / total) * 100).toFixed(1); return `${ctx.label} (${raw})`; }}}}} }
+            );
+        });
+    </script>
+}

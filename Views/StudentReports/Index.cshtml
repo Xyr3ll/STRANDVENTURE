@@ -1,0 +1,312 @@
+@{
+    Layout = "~/Views/Shared/_TeacherLayout.cshtml";
+    ViewData["Title"] = "Student Reports";
+}
+@model STRANDVENTURE.Models.TeacherPortalViewModel
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+    .reports-wrapper { margin: 0 auto; }
+    .reports-wrapper .card-body { padding: 0.9rem 1rem; }
+    .reports-wrapper h5, .reports-wrapper h6 { font-size: 0.95rem; }
+    .reports-wrapper .progress { height:18px; }
+
+    /* Constrained pie chart */
+    .chart-container { padding:.25rem 0; display:flex; justify-content:center; align-items:center; max-width:230px; margin:0 auto; }
+    #chartStrandDist { width:100%; height:auto; aspect-ratio:1/1; }
+    @@media (max-width: 575.98px){
+        .chart-container { max-width:200px; }
+    }
+
+    /* Activity list scroll */
+    .activity-scroll { max-height:400px; overflow-y:auto; }
+    .activity-scroll::-webkit-scrollbar { width:8px; }
+    .activity-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
+    .activity-scroll::-webkit-scrollbar-thumb { background:#c2c2c2; border-radius:4px; }
+    .activity-scroll::-webkit-scrollbar-thumb:hover { background:#a0a0a0; }
+
+    /* Incomplete modal table */
+    #incompleteStudentsTable tbody tr td { vertical-align: middle; }
+</style>
+
+<div class="reports-wrapper mt-3">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Student Reports</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3 align-items-end mb-3">
+                        <div class="col-121`````````````````````">
+                            <label for="sectionFilter" class="form-label">Sections</label>
+                            <select id="sectionFilter" class="form-select">
+                                <option value="">All</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row g-3 align-items-center">
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <div style="font-size:.9rem;">
+                                    <span id="ac-count" class="fw-semibold">0</span>
+                                    <span class="text-muted">out of</span>
+                                    <span id="ac-total" class="fw-semibold">0</span>
+                                    <span class="text-muted">students have completed their assessments</span>
+                                </div>
+                                <div class="d-none d-lg-flex gap-2">
+                                    <a id="btnViewIncomplete" class="btn btn-outline-primary btn-sm" href="#">
+                                        <i class="bi bi-list-check me-1"></i>
+                                        View Incomplete
+                                    </a>
+                                    <button id="btnNotifyAll" class="btn btn-outline-warning btn-sm" type="button">
+                                        <i class="bi bi-bell"></i>
+                                        Notify All Incomplete
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="progress">
+                                <div id="ac-progress" class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                            <div class="mt-1 small text-muted">
+                                <span id="ac-percent">0%</span> completed
+                            </div>
+                        </div>
+                        <div class="col-12 col-lg-4 d-lg-none mt-2">
+                            <div class="d-flex gap-2">
+                                <a id="btnViewIncompleteSm" class="btn btn-outline-primary w-100" href="#">
+                                    <i class="bi bi-list-check me-1"></i>
+                                    View Incomplete
+                                </a>
+                                <button id="btnNotifyAllSm" class="btn btn-outline-warning w-100" type="button">
+                                    <i class="bi bi-bell"></i>
+                                    Notify All
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row g-3 mt-3">
+        <div class="col-12 col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white d-flex align-items-center justify-content-between">
+                    <h6 class="mb-0">Strand Distribution</h6>
+                    <small class="text-muted">Pie Chart</small>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="chartStrandDist" width="360" height="360"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white d-flex align-items-center justify-content-between">
+                    <h6 class="mb-0">Student Activity</h6>
+                    <small class="text-muted">Newest first</small>
+                </div>
+                <div class="card-body activity-scroll">
+                    <ul id="listActivity" class="list-group list-group-flush small">
+                        <li class="list-group-item text-muted">Loading...</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mt-3">
+        <div class="card-header bg-white d-flex align-items-center justify-content-between">
+            <h6 class="mb-0">Strand Breakdown</h6>
+            <small class="text-muted">Top results by strand</small>
+        </div>
+        <div class="card-body" id="strandBreakdown">
+            <div class="text-muted">Loading...</div>
+        </div>
+    </div>
+</div>
+
+<!-- Incomplete Students Modal -->
+<div class="modal fade" id="incompleteModal" tabindex="-1" aria-labelledby="incompleteModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="incompleteModalLabel">Incomplete Students</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="small text-muted" id="incMeta">Loading...</div>
+            <div class="d-flex gap-2">
+                <button id="btnRefreshIncomplete" class="btn btn-sm btn-outline-secondary">Refresh</button>
+                <button id="btnNotifyAllInner" class="btn btn-sm btn-warning"><i class="bi bi-bell me-1"></i>Notify All</button>
+            </div>
+        </div>
+        <div class="table-responsive border rounded">
+            <table class="table table-sm align-middle mb-0" id="incompleteStudentsTable">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:40px;">#</th>
+                        <th>Name</th>
+                        <th>Section</th>
+                        <th>Remarks</th>
+                        <th style="width:120px;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="5" class="text-muted text-center">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+(function(){
+    const sectionFilter = document.getElementById('sectionFilter');
+    const acCount = document.getElementById('ac-count');
+    const acTotal = document.getElementById('ac-total');
+    const acPercent = document.getElementById('ac-percent');
+    const acProgress = document.getElementById('ac-progress');
+    const btnInc = document.getElementById('btnViewIncomplete');
+    const btnIncSm = document.getElementById('btnViewIncompleteSm');
+    const listActivity = document.getElementById('listActivity');
+    const brkHost = document.getElementById('strandBreakdown');
+    const btnNotifyAll = document.getElementById('btnNotifyAll');
+    const btnNotifyAllSm = document.getElementById('btnNotifyAllSm');
+    const btnNotifyAllInner = document.getElementById('btnNotifyAllInner');
+
+    // Incomplete modal elements
+    const incompleteModalEl = document.getElementById('incompleteModal');
+    const incompleteTableBody = document.querySelector('#incompleteStudentsTable tbody');
+    const incMeta = document.getElementById('incMeta');
+    const btnRefreshIncomplete = document.getElementById('btnRefreshIncomplete');
+    let bsIncompleteModal;
+
+    let pieChart;
+    let cachedIncomplete = []; // cache list for notify-all
+
+    async function loadSections(){
+        try{ const r = await fetch('@Url.Action("TeacherSections","StudentManagement")'); const j = await r.json(); (j.data||[]).forEach(s=>{ const o=document.createElement('option'); o.value=s.id; o.textContent=s.name; sectionFilter.appendChild(o); }); }catch{}
+    }
+
+    async function loadCompletion(){
+        const id = sectionFilter.value; const url = new URL('@Url.Action("CompletionStats","StudentReports")', window.location.origin); if(id) url.searchParams.set('sectionId', id);
+        try{ const r = await fetch(url); const j = await r.json(); const d = j.data || { totalStudents:0, completedStudents:0, percent:0 }; const total=+d.totalStudents||0; const completed=+d.completedStudents||0; const percent=+d.percent||0; acCount.textContent=completed; acTotal.textContent=total; acPercent.textContent=percent.toFixed(2)+'%'; acProgress.style.width=Math.min(100,Math.max(0,percent))+'%'; acProgress.setAttribute('aria-valuenow',percent.toFixed(2)); acProgress.classList.remove('bg-success','bg-warning','bg-danger'); if(percent>=80) acProgress.classList.add('bg-success'); else if(percent>=40) acProgress.classList.add('bg-warning'); else acProgress.classList.add('bg-danger'); }catch{ acCount.textContent='0'; acTotal.textContent='0'; acPercent.textContent='0%'; acProgress.style.width='0%'; }
+    }
+
+    function viewIncomplete(){ showIncompleteModal(); }
+
+    async function loadStrandDistribution(){
+        const id = sectionFilter.value; const url = new URL('@Url.Action("StrandDistribution","StudentReports")', window.location.origin); if(id) url.searchParams.set('sectionId', id);
+        try {
+            const r = await fetch(url); const j = await r.json(); let labels=j.labels||[]; const values=j.values||[]; const colors=j.colors||[]; const total = values.reduce((a,b)=>a+b,0) || 1;
+            labels = labels.map((l,i)=> `${((values[i]/total)*100).toFixed(1)}% ${l}`);
+            const ctx=document.getElementById('chartStrandDist');
+            const palette = colors.length ? colors.map(c=>sanitizeColor(c)) : ['#1976d2','#2e7d32','#f9a825','#8e24aa','#ef5350','#00897b','#6d4c41','#5c6bc0'];
+            const data={ labels, datasets:[{ data:values, backgroundColor: palette }] };
+            if(pieChart) pieChart.destroy();
+            pieChart = new Chart(ctx,{ type:'pie', data, options:{ responsive:false, maintainAspectRatio:true, plugins:{ legend:{ position:'bottom' }, tooltip:{ callbacks:{ label:(context)=>{ const v=context.parsed||0; const pct=((v/total)*100).toFixed(1); return `${pct}% (${v})`; } } } } } });
+        } catch { /* ignore */ }
+    }
+
+    function sanitizeColor(c){ if(!c) return '#000000'; c=c.trim(); if(!/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(c)) return '#000000'; return c; }
+
+    function renderActivityList(items){
+        listActivity.innerHTML=''; if(!items||!items.length){ listActivity.innerHTML='<li class="list-group-item text-muted">No activity yet.</li>'; return; }
+        items.forEach(it=>{ const when=it.completedAt?new Date(it.completedAt):null; const dateTxt=when?when.toLocaleString():''; const li=document.createElement('li'); li.className='list-group-item'; li.innerHTML=`<div class=\"d-flex justify-content-between\"><div><strong>${escapeHtml(it.name||'')}</strong><div class=\"text-muted\">${escapeHtml(it.sectionName||'')}</div></div><div class=\"text-end small text-muted\">${dateTxt}</div></div>`; listActivity.appendChild(li); });
+    }
+
+    function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m])); }
+
+    async function loadActivity(){ const id=sectionFilter.value; const url=new URL('@Url.Action("RecentActivity","StudentReports")', window.location.origin); if(id) url.searchParams.set('sectionId', id); try{ const r=await fetch(url); const j=await r.json(); renderActivityList(j.data||[]);}catch{ renderActivityList([]);} }
+
+    function renderBreakdown(list,total){ brkHost.innerHTML=''; if(!list||!list.length){ brkHost.innerHTML='<div class="text-muted">No data.</div>'; return;} list.forEach(row=>{ const pct=+row.percent||0; const count=+row.count||0; const name=row.strandName||''; const color=sanitizeColor(row.color||'#1e6bff'); const wrap=document.createElement('div'); wrap.className='mb-3'; wrap.innerHTML=`<div class=\"d-flex justify-content-between align-items-center mb-1\"><div class=\"fw-semibold\">${escapeHtml(name)}</div><div class=\"small text-muted\">${count} / ${total} (${pct.toFixed(2)}%)</div></div><div class=\"progress\" style=\"height:14px;\"><div class=\"progress-bar\" role=\"progressbar\" style=\"width:${Math.min(100,Math.max(0,pct))}%;background:${color};\" aria-valuenow=\"${pct}\" aria-valuemin=\"0\" aria-valuemax=\"100\"></div></div>`; brkHost.appendChild(wrap); }); }
+
+    async function loadBreakdown(){ const id=sectionFilter.value; const url=new URL('@Url.Action("StrandBreakdown","StudentReports")', window.location.origin); if(id) url.searchParams.set('sectionId', id); try{ const r=await fetch(url); const j=await r.json(); renderBreakdown(j.data||[], j.total||0);}catch{ renderBreakdown([],0);} }
+
+    // Incomplete students logic
+    async function fetchIncomplete(){
+        const id=sectionFilter.value; const url=new URL('@Url.Action("IncompleteStudents","StudentReports")', window.location.origin); if(id) url.searchParams.set('sectionId', id);
+        try { const r=await fetch(url); if(!r.ok) throw new Error(); return await r.json(); } catch { return { data: [] }; }
+    }
+
+    function notifyButton(studentId){
+        const btn=document.createElement('button');
+        btn.type='button';
+        btn.className='btn btn-sm btn-outline-warning';
+        btn.innerHTML='<i class="bi bi-bell"></i>';
+        btn.addEventListener('click', async ()=>{
+            btn.disabled=true; btn.innerHTML='<span class="spinner-border spinner-border-sm"></span>';
+            try{ const res=await fetch('@Url.Action("NotifyStudent","StudentReports")?studentId='+studentId,{method:'POST'}); const j=await res.json(); if(j.ok){ btn.classList.remove('btn-outline-warning'); btn.classList.add('btn-success'); btn.innerHTML='<i class="bi bi-check2"></i>'; } else { btn.disabled=false; btn.innerHTML='<i class="bi bi-exclamation-triangle"></i>'; } }catch{ btn.disabled=false; btn.innerHTML='<i class="bi bi-exclamation-triangle"></i>'; }
+        });
+        return btn;
+    }
+
+    function renderIncomplete(data){
+        const list = data.data || [];
+        cachedIncomplete = list.slice();
+        incompleteTableBody.innerHTML='';
+        if(!list.length){
+            incompleteTableBody.innerHTML='<tr><td colspan="5" class="text-center text-muted">All students have completed the assessment.</td></tr>';
+        } else {
+            list.forEach((s,i)=>{
+                const tr=document.createElement('tr');
+                const actionTd=document.createElement('td');
+                actionTd.appendChild(notifyButton(s.studentId));
+                tr.innerHTML=`<td>${i+1}</td><td>${escapeHtml(s.name||'')}</td><td>${escapeHtml(s.sectionName||'')}</td><td class="text-muted small">Pending</td>`;
+                tr.appendChild(actionTd);
+                incompleteTableBody.appendChild(tr);
+            });
+        }
+        const total = +acTotal.textContent || list.length; // fallback
+        incMeta.textContent = list.length + ' incomplete out of ' + total + ' students';
+    }
+
+    async function loadIncomplete(){
+        incompleteTableBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Loading...</td></tr>';
+        incMeta.textContent='Loading...';
+        const data = await fetchIncomplete();
+        renderIncomplete(data);
+    }
+
+    function showIncompleteModal(){
+        if(!bsIncompleteModal){ bsIncompleteModal = new bootstrap.Modal(incompleteModalEl); }
+        loadIncomplete();
+        bsIncompleteModal.show();
+    }
+
+    async function notifyAll(){
+        if(!cachedIncomplete.length){ return; }
+        const ids=cachedIncomplete.map(x=>x.studentId);
+        // naive sequential (small list); could batch in API if needed
+        for(const id of ids){
+            try{ await fetch('@Url.Action("NotifyStudent","StudentReports")?studentId='+id,{method:'POST'}); }catch{}
+        }
+        // give quick visual feedback
+        if(incompleteModalEl.classList.contains('show')) loadIncomplete();
+    }
+
+    sectionFilter.addEventListener('change',()=>{ loadCompletion(); loadStrandDistribution(); loadActivity(); loadBreakdown(); });
+    btnInc.addEventListener('click',e=>{ e.preventDefault(); viewIncomplete(); });
+    btnIncSm.addEventListener('click',e=>{ e.preventDefault(); viewIncomplete(); });
+    btnRefreshIncomplete.addEventListener('click',e=>{ e.preventDefault(); loadIncomplete(); });
+    btnNotifyAll && btnNotifyAll.addEventListener('click',e=>{ e.preventDefault(); notifyAll(); });
+    btnNotifyAllSm && btnNotifyAllSm.addEventListener('click',e=>{ e.preventDefault(); notifyAll(); });
+    btnNotifyAllInner && btnNotifyAllInner.addEventListener('click',e=>{ e.preventDefault(); notifyAll(); });
+
+    loadSections().then(()=>{ loadCompletion(); loadStrandDistribution(); loadActivity(); loadBreakdown(); });
+})();
+</script>
+}

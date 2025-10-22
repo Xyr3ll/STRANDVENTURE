@@ -1,0 +1,132 @@
+@model StudentSettingsViewModel
+@{
+    ViewData["Title"] = "Settings";
+}
+<h2 class="mb-3"><i class="fa fa-gear me-2 text-secondary"></i>Settings</h2>
+@if (!string.IsNullOrEmpty(Model.SuccessMessage)) { <div class="alert alert-success"><i class="fa fa-check-circle me-1"></i>@Model.SuccessMessage</div> }
+@if (!string.IsNullOrEmpty(Model.ErrorMessage)) { <div class="alert alert-danger"><i class="fa fa-triangle-exclamation me-1"></i>@Model.ErrorMessage</div> }
+
+<div class="card">
+    <div class="card-body pb-2 pt-3">
+        <ul class="nav nav-tabs" id="settingsTabs" role="tablist" style="--bs-nav-link-padding-x:1rem;">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="account-tab" data-bs-toggle="tab" data-bs-target="#account-pane" type="button" role="tab" aria-controls="account-pane" aria-selected="true">
+                    <i class="fa fa-user me-1"></i> Account
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="password-tab" data-bs-toggle="tab" data-bs-target="#password-pane" type="button" role="tab" aria-controls="password-pane" aria-selected="false">
+                    <i class="fa fa-lock me-1"></i> Change Password
+                </button>
+            </li>
+        </ul>
+        <div class="tab-content pt-3" id="settingsTabContent">
+            <div class="tab-pane fade show active" id="account-pane" role="tabpanel" aria-labelledby="account-tab" tabindex="0">
+                <div class="row">
+                    <div class="col-lg-8 col-xl-7">
+                        <div class="mb-3">
+                            <h5 class="fw-semibold mb-3"><i class="fa fa-id-card me-2 text-primary"></i>Account</h5>
+                            <dl class="row mb-0 small">
+                                <dt class="col-4 col-md-3"><i class="fa fa-user text-secondary me-1"></i>Name</dt>
+                                <dd class="col-8 col-md-9 fw-semibold">@Model.Student.Name</dd>
+                                <dt class="col-4 col-md-3"><i class="fa fa-hashtag text-secondary me-1"></i>LRN</dt>
+                                <dd class="col-8 col-md-9">@Model.Student.LRN</dd>
+                                <dt class="col-4 col-md-3"><i class="fa fa-calendar-day text-secondary me-1"></i>Created</dt>
+                                <dd class="col-8 col-md-9">@Model.Student.CreatedAt.ToLocalTime().ToString("g")</dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="password-pane" role="tabpanel" aria-labelledby="password-tab" tabindex="0">
+                <h5 class="fw-semibold mb-3"><i class="fa fa-lock me-2 text-primary"></i>Change Password</h5>
+                <form asp-action="ChangePassword" method="post" class="needs-validation" novalidate>
+                    @Html.AntiForgeryToken()
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fa fa-key me-1 text-secondary"></i> Current Password</label>
+                        <div class="input-group">
+                            <input id="currentPwd" type="password" class="form-control" name="PasswordChange.CurrentPassword" required />
+                            <button class="btn btn-outline-secondary password-toggle" type="button" data-target="#currentPwd" aria-label="Show password"><i class="fa fa-eye"></i></button>
+                        </div>
+                        <div class="invalid-feedback">Required</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fa fa-shield-halved me-1 text-secondary"></i> New Password</label>
+                        <div class="input-group">
+                            <input id="newPwd" type="password" class="form-control" name="PasswordChange.NewPassword" required minlength="6" />
+                            <button class="btn btn-outline-secondary password-toggle" type="button" data-target="#newPwd" aria-label="Show password"><i class="fa fa-eye"></i></button>
+                        </div>
+                        <div class="form-text">Minimum 6 characters.</div>
+                        <div class="invalid-feedback">Enter a valid password.</div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label"><i class="fa fa-check-double me-1 text-secondary"></i> Confirm Password</label>
+                        <div class="input-group">
+                            <input id="confirmPwd" type="password" class="form-control" name="PasswordChange.ConfirmPassword" required />
+                            <button class="btn btn-outline-secondary password-toggle" type="button" data-target="#confirmPwd" aria-label="Show password"><i class="fa fa-eye"></i></button>
+                        </div>
+                        <div class="invalid-feedback">Must match new password.</div>
+                    </div>
+                    <button class="btn btn-primary" type="submit"><i class="fa fa-save me-1"></i> Update Password</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+(function(){
+  // Persist active tab using localStorage
+  const KEY='student_settings_active_tab_v1';
+  const stored=localStorage.getItem(KEY);
+  if(stored){
+    const trigger=document.querySelector('[data-bs-target="'+stored+'"]')?.closest('button');
+    if(trigger){
+      const tab = new bootstrap.Tab(trigger);
+      tab.show();
+    }
+  }
+  document.querySelectorAll('#settingsTabs button[data-bs-toggle="tab"]').forEach(btn=>{
+    btn.addEventListener('shown.bs.tab', e=>{
+      const target=e.target.getAttribute('data-bs-target');
+      if(target) localStorage.setItem(KEY, target);
+    });
+  });
+  // Simple client validation (Bootstrap)
+  const form=document.querySelector('#password-pane form');
+  if(form){
+    form.addEventListener('submit', ev=>{
+      if(!form.checkValidity()){
+        ev.preventDefault(); ev.stopPropagation();
+      }
+      form.classList.add('was-validated');
+      const newPwd=form.querySelector('[name="PasswordChange.NewPassword"]');
+      const confirm=form.querySelector('[name="PasswordChange.ConfirmPassword"]');
+      if(newPwd && confirm && newPwd.value !== confirm.value){
+        ev.preventDefault(); ev.stopPropagation();
+        confirm.setCustomValidity('Mismatch');
+      } else if(confirm){ confirm.setCustomValidity(''); }
+    });
+  }
+  // Password show/hide toggles
+  document.querySelectorAll('.password-toggle').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const targetSel=btn.getAttribute('data-target');
+      const input=document.querySelector(targetSel);
+      if(!input) return;
+      const icon=btn.querySelector('i');
+      if(input.type==='password'){
+        input.type='text';
+        btn.setAttribute('aria-label','Hide password');
+        icon?.classList.replace('fa-eye','fa-eye-slash');
+      } else {
+        input.type='password';
+        btn.setAttribute('aria-label','Show password');
+        icon?.classList.replace('fa-eye-slash','fa-eye');
+      }
+    });
+  });
+})();
+</script>
+}

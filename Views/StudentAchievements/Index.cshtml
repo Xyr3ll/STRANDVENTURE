@@ -1,0 +1,81 @@
+@model STRANDVENTURE.Controllers.StudentAchievementsController.StudentAchievementsPageVm
+@{
+    ViewData["Title"] = "Achievements";
+}
+
+@section Styles {
+    <style>
+        .achievements-wrapper { display:grid; gap:1.25rem; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); }
+        .ach-card { position:relative; background:#fff; border:1px solid #dbe3ed; border-radius:18px; padding:1rem 1rem 1.1rem; box-shadow:0 4px 14px -6px rgba(0,0,0,.08); display:flex; flex-direction:column; min-height:160px; overflow:hidden; }
+        .ach-badge { width:46px; height:46px; border-radius:14px; background:linear-gradient(135deg,#1565c0,#1e88e5); display:flex; align-items:center; justify-content:center; font-size:1.6rem; box-shadow:0 4px 10px -4px rgba(0,0,0,.35); margin-bottom:.5rem; }
+        .ach-name { font-size:.9rem; font-weight:700; letter-spacing:.4px; margin:0 0 .35rem; }
+        .ach-desc { font-size:.65rem; line-height:.95rem; flex:1 1 auto; margin:0 0 .6rem; opacity:.85; }
+        .ach-meta { font-size:.55rem; text-transform:uppercase; font-weight:600; letter-spacing:1px; opacity:.6; display:flex; gap:.5rem; flex-wrap:wrap; }
+        .ach-locked { filter:grayscale(.85); opacity:.6; }
+        .ach-locked .ach-badge { background:linear-gradient(135deg,#6c757d,#95a0ad); }
+        .ach-earned-indicator { position:absolute; top:.65rem; right:.65rem; font-size:.75rem; font-weight:700; background:#d1f5e1; color:#0c6c3b; padding:.25rem .5rem; border-radius:999px; letter-spacing:.5px; box-shadow:0 0 0 1px #b9e8d1 inset; }
+        .ach-locked .ach-earned-indicator { display:none; }
+        .ach-locked-indicator { position:absolute; top:.65rem; right:.65rem; font-size:.75rem; font-weight:700; background:#f1f3f5; color:#4a5662; padding:.25rem .5rem; border-radius:999px; letter-spacing:.5px; box-shadow:0 0 0 1px #d9e2ec inset; }
+        .ach-earned-footer { font-size:.55rem; font-weight:600; letter-spacing:.5px; color:#0b5394; }
+        .ach-empty { background:#fff; border:1px dashed #b5c2d1; padding:1.25rem; border-radius:20px; text-align:center; font-size:.85rem; color:#4a5662; }
+    </style>
+}
+
+<h2 class="fw-bold mb-4" style="letter-spacing:1px;">Achievements</h2>
+
+@if (!Model.Earned.Any() && !Model.Locked.Any())
+{
+    <div class="ach-empty">No achievements defined yet.</div>
+}
+else
+{
+    <h5 class="fw-semibold mb-3">Unlocked (@Model.Earned.Count)</h5>
+    @if (!Model.Earned.Any())
+    {
+        <div class="ach-empty mb-4">You have not unlocked any achievements yet. Start an assessment to begin earning!</div>
+    }
+    else
+    {
+        <div class="achievements-wrapper mb-5">
+            @foreach (var a in Model.Earned)
+            {
+                <div class="ach-card">
+                    <div class="ach-badge">@(!string.IsNullOrWhiteSpace(a.Icon) ? a.Icon : "??")</div>
+                    <div class="ach-earned-indicator">UNLOCKED</div>
+                    <div class="ach-name">@a.Name</div>
+                    <div class="ach-desc">@a.Description</div>
+                    <div class="ach-meta">
+                        @if (!string.IsNullOrWhiteSpace(a.Rarity)) { <span>@a.Rarity</span>; }
+                        @if (!string.IsNullOrWhiteSpace(a.Category)) { <span>@a.Category</span>; }
+                        <span>@a.Code</span>
+                    </div>
+                    <div class="ach-earned-footer mt-2">@a.UnlockedAt?.ToLocalTime().ToString("g")</div>
+                </div>
+            }
+        </div>
+    }
+    <h5 class="fw-semibold mb-3">Locked (@Model.Locked.Count)</h5>
+    @if (!Model.Locked.Any())
+    {
+        <div class="ach-empty">No locked achievements. Great job!</div>
+    }
+    else
+    {
+        <div class="achievements-wrapper">
+            @foreach (var a in Model.Locked)
+            {
+                <div class="ach-card ach-locked">
+                    <div class="ach-badge">@(!string.IsNullOrWhiteSpace(a.Icon) ? a.Icon : "??")</div>
+                    <div class="ach-locked-indicator">LOCKED</div>
+                    <div class="ach-name">@a.Name</div>
+                    <div class="ach-desc">@a.Description</div>
+                    <div class="ach-meta">
+                        @if (!string.IsNullOrWhiteSpace(a.Rarity)) { <span>@a.Rarity</span>; }
+                        @if (!string.IsNullOrWhiteSpace(a.Category)) { <span>@a.Category</span>; }
+                        <span>@a.Code</span>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+}

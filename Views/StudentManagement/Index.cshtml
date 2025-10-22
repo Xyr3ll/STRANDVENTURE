@@ -1,0 +1,531 @@
+@{
+    Layout = "~/Views/Shared/_TeacherLayout.cshtml";
+    ViewData["Title"] = "Student Management";
+}
+@model STRANDVENTURE.Models.TeacherPortalViewModel
+
+<link rel="stylesheet" href="https://cdn.datatables.net/v/bs5/dt-2.0.0/datatables.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+<style>
+  /* Overlay spinner covers entire modal body */
+  #viewStudentModalBody { position:relative; }
+  #strandChartOverlay { position:absolute; inset:0; background:rgba(255,255,255,.80); z-index:1500; }
+  #strandChartOverlay .spinner-border { width:3.5rem; height:3.5rem; }
+  /* Extra compact chart */
+  #student-assessment-chart-col { display:flex; flex-direction:column; align-items:center; }
+  #studentStrandPie { width: clamp(100px, 20vw, 200px) !important; max-width:200px; aspect-ratio:1/1; height:auto !important; }
+  /* Two fixed columns legend */
+  #studentStrandLegend { display:flex; gap:1.1rem; justify-content:center; }
+  #studentStrandLegend .legend-col { flex:1 1 0; display:flex; flex-direction:column; gap:.35rem; min-width:110px; }
+  #studentStrandLegend .legend-item { display:flex; align-items:center; gap:.4rem; line-height:1.05; font-size:.85rem; }
+  #studentStrandLegend .swatch { width:12px; height:12px; border-radius:3px; box-shadow:0 0 0 1px rgba(0,0,0,.15) inset; }
+  @@media (max-width:600px){
+    #studentStrandLegend { flex-direction:column; }
+    #studentStrandLegend .legend-col { flex:none; }
+  }
+
+  .viewstudent-modal-withchart{
+      max-width: 600px;
+  }
+</style>
+
+<div class="mt-3">
+    <div class="card shadow-sm">
+        <div class="card-header bg-white d-flex align-items-center gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <h5 class="mb-0">Students</h5>
+            </div>
+            <div class="ms-auto d-flex align-items-center gap-2">
+                <button id="btnToggleFilters" class="btn btn-outline-secondary btn-sm" type="button" aria-pressed="false">
+                    <i class="bi bi-funnel me-1"></i>
+                    Filters
+                </button>
+                <button id="btnBulkDelete" class="btn btn-danger btn-sm">
+                    <i class="bi bi-trash me-1"></i>
+                    Bulk Delete
+                </button>
+                <button id="btnAddStudent" class="btn btn-primary btn-sm">
+                    <i class="bi bi-person-plus me-1"></i>
+                    Add Student
+                </button>
+                <button id="btnBulkUpload" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-upload me-1"></i>
+                    Bulk Upload
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table id="studentsTable" class="table table-striped table-hover align-middle" width="100%">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width:26px;"><input type="checkbox" id="selectAllRows"></th>
+                            <th style="width:40px;"></th>
+                            <th>Name</th>
+                            <th>LRN</th>
+                            <th>Section</th>
+                            <th>Birthday</th>
+                            <th>Assessment</th>
+                        </tr>
+                        <tr class="filters-row d-none">
+                            <th></th>
+                            <th></th>
+                            <th>
+                                <input id="filterName" type="text" class="form-control form-control-sm" placeholder="Search name">
+                            </th>
+                            <th>
+                                <input id="filterLRN" type="text" class="form-control form-control-sm" placeholder="Search LRN">
+                            </th>
+                            <th>
+                                <select id="filterSection" class="form-select form-select-sm">
+                                    <option value="">All Sections</option>
+                                </select>
+                            </th>
+                            <th>
+                                <input id="filterBirthday" type="text" class="form-control form-control-sm" placeholder="YYYY-MM-DD">
+                            </th>
+                            <th>
+                                <select id="filterAssessment" class="form-select form-select-sm">
+                                    <option value="">All</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="pending">Pending</option>
+                                </select>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Student Modal -->
+<div class="modal fade" id="modalViewStudent" tabindex="-1" aria-hidden="true">
+  <div id="modalviewstudent-modaldialog" class="modal-dialog">
+    <div class="modal-content position-relative">
+      <div id="viewStudentModalBody" class="modal-body">
+        <button type="button" class="btn-close position-absolute end-0 mt-2 me-2" data-bs-dismiss="modal" aria-label="Close"></button>
+        <h3 id="viewStudentNameHeader" class="mb-1"></h3>
+        <div class="text-muted small mb-3">Student Information</div>
+        <div class="row align-items-start">
+          <div id="student-information" class="col-6">
+            <div class="row mb-2"><div class="col-4 fw-bolder">LRN</div><div class="col-8" id="viewLRNText"></div></div>
+            <div class="row mb-2"><div class="col-4 fw-bolder">Section</div><div class="col-8" id="viewSectionText"></div></div>
+            <div class="row mb-2"><div class="col-4 fw-bolder">Birthday</div><div class="col-8" id="viewBirthdayText"></div></div>
+            <div class="row"><div class="col-4 fw-bolder">Assessment</div><div class="col-8" id="viewAssessmentText"></div></div>
+          </div>
+          <div id="student-assessment-chart-col" class="col-6 d-none" aria-busy="false">
+            <canvas id="studentStrandPie" class="d-none"></canvas>
+            <div id="studentStrandLegend" class="student-strand-legend mt-3 small"></div>
+          </div>
+        </div>
+        <div id="strandChartOverlay" class="d-none d-flex flex-column align-items-center justify-content-center">
+          <div class="spinner-border text-primary mb-2" role="status" aria-label="Loading assessment"></div>
+          <div class="small text-muted">Loading assessment data...</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal" type="button">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Student Modal -->
+<div class="modal fade" id="modalAddStudent" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Add Student</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="formAddStudent">
+          <div class="mb-3">
+            <label class="form-label">LRN</label>
+            <input type="text" class="form-control" id="addLRN" maxlength="12" required>
+            <div class="form-text">Enter the 12-digit LRN.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Name</label>
+            <input type="text" class="form-control" id="addName" maxlength="100" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Section</label>
+            <select class="form-select" id="addSectionId" required>
+              <option value="" selected disabled>Choose a section</option>
+            </select>
+          </div>
+          <div class="mb-0">
+            <label class="form-label">Birthday</label>
+            <input type="date" class="form-control" id="addBirthday" required>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal" type="button">Cancel</button>
+        <button class="btn btn-primary" id="btnSaveAdd" type="button">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Student Modal -->
+<div class="modal fade" id="modalEditStudent" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Student</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="formEditStudent">
+          <input type="hidden" id="editId">
+          <div class="mb-3"><label class="form-label">LRN</label><input type="text" class="form-control" id="editLRN" maxlength="12" required></div>
+          <div class="mb-3"><label class="form-label">Name</label><input type="text" class="form-control" id="editName" maxlength="100" required></div>
+          <div class="mb-3"><label class="form-label">Section</label><select class="form-select" id="editSectionId" required><option value="" disabled selected>Choose a section</option></select></div>
+          <div class="mb-0"><label class="form-label">Birthday</label><input type="date" class="form-control" id="editBirthday" required></div>
+        </form>
+      </div>
+      <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal" type="button">Cancel</button><button class="btn btn-primary" id="btnSaveEdit" type="button">Save Changes</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Bulk Upload Modal -->
+<div class="modal fade" id="modalBulkUpload" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">Bulk Upload Students</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <form id="formBulkUpload">
+          <div class="row g-3">
+            <div class="col-sm-4"><label class="form-label">Target Section</label><select class="form-select form-select-sm" id="bulkSectionId" required><option value="" disabled selected>Loading...</option></select></div>
+            <div class="col-sm-8">
+              <label class="form-label d-flex justify-content-between"><span>CSV File</span><a href="@Url.Action("BulkUploadTemplate","StudentManagement")" class="small">Download Template</a></label>
+              <input class="form-control form-control-sm" type="file" id="bulkFile" accept=".csv" required />
+            </div>
+          </div>
+        </form>
+        <hr />
+        <p class="small mb-1">Expected headers (any order): <code>LRN,Name,Birthday</code></p>
+        <p class="small mb-2">Birthday formats accepted: <code>yyyy-MM-dd</code> or <code>MM/dd/yyyy</code>. All new students get default password: Student@123.</p>
+        <div id="bulkResult" class="d-none"><h6 class="mt-3">Result</h6><pre class="small bg-light p-2 border" id="bulkResultText"></pre></div>
+      </div>
+      <div class="modal-footer"><button class="btn btn-secondary btn-sm" data-bs-dismiss="modal" type="button">Close</button><button class="btn btn-outline-secondary btn-sm" id="btnBulkReset" type="button">Reset</button><button class="btn btn-primary btn-sm" id="btnBulkSubmit" type="button">Upload</button></div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script src="https://cdn.datatables.net/v/bs5/dt-2.0.0/datatables.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+(function(){
+    const MIN_SPINNER_MS = 1000;
+    function escapeHtml(s){
+        return (s||'').replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;","\"":"&quot;","'":"&#39;",">":"&gt;"}[c]));
+    }
+
+    // NEW: sections helpers (used by bulk upload and filters)
+    const sectionsUrl = '@Url.Action("TeacherSections","StudentManagement")';
+    let cachedSections = null;
+    async function fetchSections(){
+        if(cachedSections) return cachedSections;
+        try { const r = await fetch(sectionsUrl); const j = await r.json(); cachedSections = (j.data||[]); return cachedSections; } catch { return []; }
+    }
+    async function loadSections(selectId){
+        const sel = document.getElementById(selectId); if(!sel) return;
+        sel.innerHTML = '<option value="" disabled selected>Loading...</option>';
+        const list = await fetchSections();
+        sel.innerHTML = '';
+        const placeholder = document.createElement('option'); placeholder.value=''; placeholder.disabled=true; placeholder.selected=true; placeholder.textContent='Choose a section'; sel.appendChild(placeholder);
+        list.forEach(s=> sel.add(new Option(s.name, s.id)));
+    }
+    async function loadFilterSections(selectId){
+        const sel = document.getElementById(selectId); if(!sel) return;
+        while(sel.options.length > 1) sel.remove(1); // keep "All Sections"
+        const list = await fetchSections();
+        list.forEach(s=> sel.add(new Option(s.name, s.id)));
+    }
+
+    // DataTable init
+    const table = new DataTable('#studentsTable', {
+        ajax:{ url:'@Url.Action("ListStudents","StudentManagement")', dataSrc:'data' },
+        pageLength:10,
+        orderCellsTop:true,
+        columns:[
+            { data:null, orderable:false, className:'text-center', render:(_,__,row)=>`<input type="checkbox" class="row-select" data-id="${row.id}">` },
+            { data:null, orderable:false, className:'text-start', render:renderActions },
+            { data:'name' },
+            { data:'lrn' },
+            { data:'sectionName', defaultContent:'' },
+            { data:'birthday', render:renderDate },
+            { data:'assessmentStatus', render:renderAssessmentDT }
+        ]
+    });
+
+    function renderActions(_,__,row){
+        const id=row.id;
+        const canRetake=(row.assessmentStatus||'').toLowerCase()==='completed';
+        const retakeHtml = canRetake ? '<li><hr class="dropdown-divider" /></li><li><a class="dropdown-item text-warning" href="#" data-action="retake" data-id="'+id+'"><i class="bi bi-arrow-clockwise me-1"></i>Retake Assessment</a></li>' : '';
+        return `<div class="dropdown"><button class="btn btn-light btn-sm dropdown-toggle" data-bs-toggle="dropdown">Actions</button><ul class="dropdown-menu"><li><a class="dropdown-item" href="#" data-action="view" data-id="${id}"><i class="bi bi-eye me-1"></i>View</a></li><li><a class="dropdown-item" href="#" data-action="edit" data-id="${id}"><i class="bi bi-pencil-square me-1"></i>Edit</a></li><li><a class="dropdown-item text-danger" href="#" data-action="delete" data-id="${id}"><i class="bi bi-trash me-1"></i>Delete</a></li>${retakeHtml}</ul></div>`;
+    }
+    function renderDate(v){ if(!v) return ''; const d=new Date(v); return isNaN(d)?'':d.toLocaleDateString(); }
+    function normalizeAssessment(v){ const s=(v||'').toString().toLowerCase(); if(['completed','complete','done'].includes(s)) return 'completed'; if(!s) return ''; return 'pending'; }
+    function renderAssessmentDT(v,type){ const norm=normalizeAssessment(v); if(type==='display') return norm==='completed'?'<span class="badge bg-success">Completed</span>':'<span class="badge bg-warning text-dark">Pending</span>'; return norm==='completed'?'Completed':'Pending'; }
+    function getRow(e){ const tr=e.target.closest('tr'); return table.row(tr).data(); }
+
+    document.getElementById('studentsTable').addEventListener('click', async e=>{
+        const a=e.target.closest('a[data-action]');
+        if(!a) return;
+        e.preventDefault();
+        const row=getRow(e);
+        if(!row) return;
+        const action=a.dataset.action;
+        if(action==='view') openView(row);
+        else if(action==='edit') openEdit(row);
+        else if(action==='delete') await deleteRow(row);
+        else if(action==='retake') await retakeAssessment(row);
+    });
+
+    async function deleteRow(row){
+        const confirmDlg=await Swal.fire({ icon:'warning', title:'Delete student?', text:'This action cannot be undone.', showCancelButton:true, confirmButtonText:'Delete', cancelButtonText:'Cancel'});
+        if(!confirmDlg.isConfirmed) return;
+        const pre=await precheck([row.id]);
+        if(!pre) return;
+        if((pre.unauthorized||[]).length){ await Swal.fire({ icon:'warning', title:'Cannot delete', text:'You do not have permission to delete this student.'}); return; }
+        const url='@Url.Action("DeleteStudent","StudentManagement")?id='+encodeURIComponent(row.id);
+        try{
+            const res=await fetch(url,{method:'DELETE'});
+            const j=await res.json().catch(()=>({}));
+            if(!res.ok){ await Swal.fire({ icon:'error', title:'Failed', text:j.message||'Delete failed.'}); return; }
+            await Swal.fire({ icon:'success', title:'Deleted', timer:1400, showConfirmButton:false });
+            table.ajax.reload(null,false);
+        }catch{ await Swal.fire({ icon:'error', title:'Failed', text:'Network or server error.'}); }
+    }
+
+    const selectAll=document.getElementById('selectAllRows');
+    selectAll.addEventListener('change',()=>{
+        document.querySelectorAll('#studentsTable tbody input.row-select').forEach(cb=>cb.checked=selectAll.checked);
+    });
+
+    async function precheck(ids){
+        try{
+            const res=await fetch('@Url.Action("CanDeleteStudents","StudentManagement")',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ ids })});
+            const j=await res.json().catch(()=>({}));
+            if(!res.ok) throw new Error(j.message||'Unable to check dependencies.');
+            return j;
+        }catch(err){
+            await Swal.fire({ icon:'error', title:'Failed', text:err.message||'Unable to check dependencies.'});
+            return null;
+        }
+    }
+
+    async function retakeAssessment(row){
+        const confirmResult=await Swal.fire({ title:'Retake assessment?', text:'This will remove the current result and set status back to Pending.', icon:'warning', showCancelButton:true, confirmButtonText:'Yes, retake', cancelButtonText:'Cancel'});
+        if(!confirmResult.isConfirmed) return;
+        Swal.showLoading();
+        try{
+            const res=await fetch('@Url.Action("RetakeAssessment","StudentManagement")',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ studentId:row.id })});
+            const j=await res.json().catch(()=>({}));
+            if(!res.ok){ await Swal.fire({ icon:'error', title:'Failed', text:j.message||'Operation failed.'}); return; }
+            await Swal.fire({ icon:'success', title:'Assessment reset', timer:1500, showConfirmButton:false });
+            table.ajax.reload(null,false);
+        }catch{ await Swal.fire({ icon:'error', title:'Failed', text:'Network or server error.'}); }
+    }
+
+    let strandChart=null; function destroyStrandChart(){ if(strandChart){ strandChart.destroy(); strandChart=null; } }
+
+    function openView(row){
+        const modalDialog=document.getElementById('modalviewstudent-modaldialog');
+        modalDialog.classList.remove('viewstudent-modal-withchart');
+        document.getElementById('viewStudentNameHeader').textContent=row.name||'';
+        document.getElementById('viewLRNText').textContent=row.lrn||'';
+        document.getElementById('viewSectionText').textContent=row.sectionName||'';
+        document.getElementById('viewBirthdayText').textContent=renderDate(row.birthday);
+        document.getElementById('viewAssessmentText').textContent=normalizeAssessment(row.assessmentStatus)==='completed'?'Completed':'Pending';
+
+        const infoCol=document.getElementById('student-information');
+        const chartCol=document.getElementById('student-assessment-chart-col');
+        const overlay=document.getElementById('strandChartOverlay');
+        const statusCompleted=normalizeAssessment(row.assessmentStatus)==='completed';
+        destroyStrandChart();
+        chartCol.classList.add('d-none');
+        infoCol.classList.toggle('col-12', !statusCompleted);
+        infoCol.classList.toggle('col-6', statusCompleted);
+        overlay.classList.add('d-none');
+
+        if(statusCompleted){
+            modalDialog.classList.add('viewstudent-modal-withchart');
+            chartCol.classList.remove('d-none');
+            overlay.classList.remove('d-none');
+            const start=Date.now();
+            const fetchData=()=>{
+                fetch('@Url.Action("StudentStrandScores","StudentManagement")?studentId='+encodeURIComponent(row.id))
+                  .then(r=>r.ok?r.json():Promise.reject())
+                  .then(j=>{
+                      const items=(j.data||[]).filter(x=>typeof x.percent==='number' && x.percent>0);
+                      if(!items.length){ finish(true); infoCol.classList.add('col-12'); infoCol.classList.remove('col-6'); chartCol.classList.add('d-none'); return; }
+                      const labels=items.map(x=>x.strand||x.name||'');
+
+                      const values=items.map(x=>Number(x.percent));
+                      const palette=['#4e79a7','#f28e2c','#e15759','#76b7b2','#59a14f','#edc948','#b07aa1','#ff9da7','#9c755f','#bab0ab'];
+                      const colors=labels.map((_,i)=>palette[i%palette.length]);
+                      const ctx=document.getElementById('studentStrandPie');
+                      ctx.classList.remove('d-none');
+                      strandChart=new Chart(ctx,{ type:'pie', data:{ labels,datasets:[{ data:values, backgroundColor:colors }] }, options:{ responsive:true, maintainAspectRatio:true, plugins:{ legend:{ display:false }}, layout:{ padding:0 } } });
+                      buildLegend(items, colors);
+                      finish(false);
+                  })
+                  .catch(()=>{ finish(true); infoCol.classList.add('col-12'); infoCol.classList.remove('col-6'); chartCol.classList.add('d-none'); });
+                function finish(force){ const elapsed=Date.now()-start; const delay=Math.max(0, MIN_SPINNER_MS-elapsed); setTimeout(()=> overlay.classList.add('d-none'), delay); if(force) overlay.classList.add('d-none'); }
+            };
+            if(window.requestAnimationFrame) requestAnimationFrame(()=>setTimeout(fetchData,0)); else setTimeout(fetchData,0);
+        }
+        new bootstrap.Modal('#modalViewStudent').show();
+    }
+
+    function buildLegend(items, colors){
+        const legend=document.getElementById('studentStrandLegend');
+        legend.innerHTML='';
+        // Split into two columns (first 4, next 4 / remaining)
+        const col1=document.createElement('div'); col1.className='legend-col';
+        const col2=document.createElement('div'); col2.className='legend-col';
+        items.forEach((item,i)=>{
+            const name=(item.strand||item.name||'').replace(/^[0-9]+\./,'').trim();
+            const div=document.createElement('div');
+            div.className='legend-item';
+            div.innerHTML=`<div class="swatch" style="background:${colors[i]}"></div><div>${escapeHtml(name)}</div>`;
+            (i < 4 ? col1 : col2).appendChild(div);
+        });
+        legend.appendChild(col1);
+        if(items.length > 4) legend.appendChild(col2);
+    }
+    function updateLegendColumns(){ /* no-op now */ }
+
+    document.getElementById('btnSaveAdd').addEventListener('click', async()=>{
+        const payload={ lrn:addLRN.value.trim(), name:addName.value.trim(), sectionId:addSectionId.value, birthday:addBirthday.value };
+        try{
+            const res=await fetch('@Url.Action("CreateStudent","StudentManagement")',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+            if(!res.ok){ const e=await res.json().catch(()=>({})); await Swal.fire({ icon:'error', title:'Failed', text:e.message||'Failed'}); return;}
+            bootstrap.Modal.getInstance(modalAddStudent).hide();
+            table.ajax.reload(null,false);
+        }catch{ await Swal.fire({ icon:'error', title:'Failed', text:'Failed'}); }});
+    document.getElementById('btnSaveEdit').addEventListener('click', async()=>{
+        const payload={ id:editId.value, lrn:editLRN.value.trim(), name:editName.value.trim(), sectionId:editSectionId.value, birthday:editBirthday.value };
+        try{
+            const res=await fetch('@Url.Action("UpdateStudent","StudentManagement")',{ method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+            if(!res.ok){ const e=await res.json().catch(()=>({})); await Swal.fire({ icon:'error', title:'Failed', text:e.message||'Failed'}); return;}
+            bootstrap.Modal.getInstance(modalEditStudent).hide();
+            table.ajax.reload(null,false);
+        }catch{ await Swal.fire({ icon:'error', title:'Failed', text:'Failed'}); }});
+
+    const bulkResult=document.getElementById('bulkResult'); const bulkResultText=document.getElementById('bulkResultText'); document.getElementById('btnBulkUpload').addEventListener('click', async()=>{ bulkResult.classList.add('d-none'); bulkResultText.textContent=''; document.getElementById('formBulkUpload').reset(); await loadSections('bulkSectionId'); new bootstrap.Modal('#modalBulkUpload').show(); }); document.getElementById('btnBulkReset').addEventListener('click',()=>{ document.getElementById('formBulkUpload').reset(); bulkResult.classList.add('d-none'); bulkResultText.textContent=''; }); document.getElementById('btnBulkSubmit').addEventListener('click', async()=>{ const file=document.getElementById('bulkFile').files[0]; const sectionId=document.getElementById('bulkSectionId').value; if(!file){ await Swal.fire({ icon:'info', title:'Choose a file'}); return;} if(!sectionId){ await Swal.fire({ icon:'info', title:'Choose a section'}); return;} const fd=new FormData(); fd.append('file', file); fd.append('sectionId', sectionId); bulkResult.classList.add('d-none'); bulkResultText.textContent='Uploading...'; try{ const res=await fetch('@Url.Action("BulkUploadStudents","StudentManagement")',{ method:'POST', body:fd }); const json=await res.json().catch(()=>({})); if(!res.ok){ bulkResultText.textContent=json.message||'Upload failed.'; bulkResult.classList.remove('d-none'); return;} const r=json.report; let summary=`Created: ${r.created}\nDuplicates (LRN): ${r.duplicateLRN}\nDuplicate Names: ${r.duplicateName}\nInvalid Rows: ${r.invalidRows}`; if(r.errors && r.errors.length){ summary+=`\nErrors:\n - ${r.errors.join('\n - ')}`;} bulkResultText.textContent=summary; bulkResult.classList.remove('d-none'); table.ajax.reload(null,false);}catch{ bulkResultText.textContent='Upload failed.'; bulkResult.classList.remove('d-none'); }});
+
+    const filterName=document.getElementById('filterName');
+    const filterLRN=document.getElementById('filterLRN');
+    const filterSection=document.getElementById('filterSection');
+    const filterBirthday=document.getElementById('filterBirthday');
+    const filterAssessment=document.getElementById('filterAssessment');
+
+    if(window.flatpickr){
+        flatpickr('#filterBirthday',{ dateFormat:'Y-m-d', allowInput:true, clickOpens:true, onChange:()=>table.draw() });
+    }
+    loadFilterSections('filterSection');
+
+    function normalizeString(v){ return (v??'').toString().toLowerCase(); }
+    function toYMD(dateLike){ if(!dateLike) return ''; const d=new Date(dateLike); if(isNaN(d)) return ''; return d.toLocaleDateString('en-CA'); }
+
+    DataTable.ext.search.push(function(settings, data, dataIndex){
+        if(settings.nTable!==document.getElementById('studentsTable')) return true;
+        const row=table.row(dataIndex).data()||{};
+        const nameQ=normalizeString(filterName.value);
+        const lrnQ=normalizeString(filterLRN.value);
+        const sectionQ=(filterSection.value||'').toString();
+        const bdayQ=(filterBirthday.value||'').toString();
+        const assessQ=normalizeString(filterAssessment.value);
+        if(nameQ && !normalizeString(row.name).includes(nameQ)) return false;
+        if(lrnQ && !normalizeString(row.lrn).includes(lrnQ)) return false;
+        if(sectionQ && String(row.sectionId)!==sectionQ) return false;
+        if(bdayQ){ const ymd=toYMD(row.birthday); if(ymd!==bdayQ) return false; }
+        if(assessQ && normalizeAssessment(row.assessmentStatus)!==assessQ) return false;
+        return true;
+    });
+
+    ['input','change'].forEach(evt=>{
+        filterName.addEventListener(evt,()=>table.draw());
+        filterLRN.addEventListener(evt,()=>table.draw());
+        filterSection.addEventListener(evt,()=>table.draw());
+        filterAssessment.addEventListener(evt,()=>table.draw());
+    });
+    [filterName, filterLRN].forEach(el=>{
+        el.addEventListener('keydown',e=>{ if(e.key==='Enter') e.preventDefault(); });
+    });
+
+    const filtersRow=document.querySelector('#studentsTable thead tr.filters-row');
+    const toggleBtn=document.getElementById('btnToggleFilters');
+    function setFiltersVisible(v){
+        if(v){
+            filtersRow.classList.remove('d-none');
+            toggleBtn.classList.add('active');
+            toggleBtn.setAttribute('aria-pressed','true');
+        } else {
+            filtersRow.classList.add('d-none');
+            toggleBtn.classList.remove('active');
+            toggleBtn.setAttribute('aria-pressed','false');
+        }
+        try{ localStorage.setItem('students_filters_visible', v?'1':'0'); }catch{} }
+    toggleBtn.addEventListener('click',()=>{ const willShow=filtersRow.classList.contains('d-none'); setFiltersVisible(willShow); });
+    const saved= typeof localStorage!=='undefined'? localStorage.getItem('students_filters_visible'): null;
+    setFiltersVisible(saved==='1');
+
+    // Modal and form element refs
+const modalAddStudent = document.getElementById('modalAddStudent');
+const modalEditStudent = document.getElementById('modalEditStudent');
+const btnAddStudent = document.getElementById('btnAddStudent');
+
+// Add form elements
+const addForm = document.getElementById('formAddStudent');
+const addLRN = document.getElementById('addLRN');
+const addName = document.getElementById('addName');
+const addSectionId = document.getElementById('addSectionId');
+const addBirthday = document.getElementById('addBirthday');
+
+// Edit form elements
+const editForm = document.getElementById('formEditStudent');
+const editId = document.getElementById('editId');
+const editLRN = document.getElementById('editLRN');
+const editName = document.getElementById('editName');
+const editSectionId = document.getElementById('editSectionId');
+const editBirthday = document.getElementById('editBirthday');
+
+// Open "Add Student" modal
+async function openAdd(){
+    addForm.reset();
+    await loadSections('addSectionId');
+    new bootstrap.Modal(modalAddStudent).show();
+}
+
+// Open "Edit Student" modal (fills current values)
+async function openEdit(row){
+    editForm.reset();
+    editId.value = row.id || '';
+    editLRN.value = row.lrn || '';
+    editName.value = row.name || '';
+    await loadSections('editSectionId');        // ensure options are present
+    editSectionId.value = row.sectionId || '';  // select current section
+    editBirthday.value = toYMD(row.birthday);   // yyyy-MM-dd
+    new bootstrap.Modal(modalEditStudent).show();
+}
+
+// Button to open Add modal
+btnAddStudent.addEventListener('click', async () => {
+    await openAdd();
+});
+})();
+</script>
+}
