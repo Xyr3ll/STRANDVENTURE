@@ -11,17 +11,23 @@ namespace STRANDVENTURE.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropForeignKey(
-                name: "FK_Sections_Employees_TeacherId",
-                table: "Sections");
+            // Drop old foreign key, index and column only if they exist to avoid errors when running migrations
+            migrationBuilder.Sql(@"
+IF EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_Sections_Employees_TeacherId' AND parent_object_id = OBJECT_ID(N'dbo.Sections'))
+BEGIN
+    ALTER TABLE [dbo].[Sections] DROP CONSTRAINT [FK_Sections_Employees_TeacherId];
+END
 
-            migrationBuilder.DropIndex(
-                name: "IX_Sections_TeacherId",
-                table: "Sections");
+IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Sections_TeacherId' AND object_id = OBJECT_ID(N'dbo.Sections'))
+BEGIN
+    DROP INDEX [IX_Sections_TeacherId] ON [dbo].[Sections];
+END
 
-            migrationBuilder.DropColumn(
-                name: "TeacherId",
-                table: "Sections");
+IF EXISTS (SELECT 1 FROM sys.columns WHERE Name = N'TeacherId' AND Object_ID(N'dbo.Sections') IS NOT NULL)
+BEGIN
+    ALTER TABLE [dbo].[Sections] DROP COLUMN [TeacherId];
+END
+");
 
             migrationBuilder.AddColumn<Guid>(
                 name: "EmployeeId",

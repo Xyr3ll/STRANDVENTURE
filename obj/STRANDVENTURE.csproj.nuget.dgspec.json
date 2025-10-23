@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "D:\\CLIENT SYSTEM\\STRANDVENTURE-demo\\STRANDVENTURE\\STRANDVENTURE.csproj": {}
+    "D:\\CLIENT SYSTEM\\STRANDVENTURE\\STRANDVENTURE\\STRANDVENTURE.csproj": {}
   },
   "projects": {
-    "D:\\CLIENT SYSTEM\\STRANDVENTURE-demo\\STRANDVENTURE\\STRANDVENTURE.csproj": {
+    "D:\\CLIENT SYSTEM\\STRANDVENTURE\\STRANDVENTURE\\STRANDVENTURE.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\CLIENT SYSTEM\\STRANDVENTURE-demo\\STRANDVENTURE\\STRANDVENTURE.csproj",
+        "projectUniqueName": "D:\\CLIENT SYSTEM\\STRANDVENTURE\\STRANDVENTURE\\STRANDVENTURE.csproj",
         "projectName": "STRANDVENTURE",
-        "projectPath": "D:\\CLIENT SYSTEM\\STRANDVENTURE-demo\\STRANDVENTURE\\STRANDVENTURE.csproj",
+        "projectPath": "D:\\CLIENT SYSTEM\\STRANDVENTURE\\STRANDVENTURE\\STRANDVENTURE.csproj",
         "packagesPath": "C:\\Users\\Neil\\.nuget\\packages\\",
-        "outputPath": "D:\\CLIENT SYSTEM\\STRANDVENTURE-demo\\STRANDVENTURE\\obj\\",
+        "outputPath": "D:\\CLIENT SYSTEM\\STRANDVENTURE\\STRANDVENTURE\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\Neil\\AppData\\Roaming\\NuGet\\NuGet.Config"

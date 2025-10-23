@@ -49,7 +49,7 @@ namespace STRANDVENTURE.Controllers
         public async Task<IActionResult> Index()
         {
             if (!await EnsureSuperAdminAsync())
-                return Forbid();
+                return Unauthorized();
 
             var emp = await GetCurrentEmployeeAsync();
             ViewData["PortalTitle"] = "Super Admin Portal";
@@ -72,7 +72,7 @@ namespace STRANDVENTURE.Controllers
         public async Task<IActionResult> CreateSection([FromBody] CreateSectionRequest req, CancellationToken ct)
         {
             if (!await EnsureSuperAdminAsync())
-                return Forbid();
+                return Unauthorized();
 
             if (!ModelState.IsValid || string.IsNullOrWhiteSpace(req.Name) || req.GradeLevel <= 0)
                 return BadRequest(new { message = "Invalid payload." });
@@ -100,7 +100,7 @@ namespace STRANDVENTURE.Controllers
         public async Task<IActionResult> UpdateSection([FromBody] UpdateSectionRequest req, CancellationToken ct)
         {
             if (!await EnsureSuperAdminAsync())
-                return Forbid();
+                return Unauthorized();
 
             if (!ModelState.IsValid || req.Id == Guid.Empty || string.IsNullOrWhiteSpace(req.Name) || req.GradeLevel <= 0)
                 return BadRequest(new { message = "Invalid payload." });
@@ -121,7 +121,7 @@ namespace STRANDVENTURE.Controllers
         public async Task<IActionResult> DeleteSection([FromBody] Guid id, CancellationToken ct)
         {
             if (!await EnsureSuperAdminAsync())
-                return Forbid();
+                return Unauthorized();
 
             if (id == Guid.Empty)
                 return BadRequest(new { message = "Invalid section id." });
@@ -152,7 +152,7 @@ namespace STRANDVENTURE.Controllers
         public async Task<IActionResult> CanDeleteSections([FromBody] BulkDeleteSectionsRequest req, CancellationToken ct)
         {
             if (!await EnsureSuperAdminAsync())
-                return Forbid();
+                return Unauthorized();
             if (req is null || req.Ids is null || req.Ids.Count == 0)
                 return BadRequest(new { message = "No ids provided." });
 
@@ -187,7 +187,7 @@ namespace STRANDVENTURE.Controllers
         public async Task<IActionResult> BulkDeleteSections([FromBody] BulkDeleteSectionsRequest req, CancellationToken ct)
         {
             if (!await EnsureSuperAdminAsync())
-                return Forbid();
+                return Unauthorized();
 
             if (req is null || req.Ids is null || req.Ids.Count == 0)
                 return BadRequest(new { message = "No ids provided." });
@@ -199,7 +199,38 @@ namespace STRANDVENTURE.Controllers
 
             foreach (var id in ids)
             {
-                // ...existing code for bulk delete...
+                if (id == Guid.Empty)
+                {
+                    errors.Add($"Invalid id: {id}");
+                    continue;
+                }
+
+                var section = await _sectionService.GetByIdAsync(id, ct);
+                if (section is null)
+                {
+                    notFound.Add(id);
+                    continue;
+                }
+
+                // If section has students, skip and report reason
+                var hasStudents = await _db.SectionStudents.AnyAsync(ss => ss.SectionId == id, ct);
+                if (hasStudents)
+                {
+                    errors.Add($"{id}: Section has enrolled students");
+                    continue;
+                }
+
+                try
+                {
+                    var ok = await _sectionService.DeleteByIdAsync(id, ct);
+                    if (ok) deleted++;
+                    else errors.Add($"{id}: delete operation failed");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to delete section {SectionId}", id);
+                    errors.Add($"{id}: {ex.Message}");
+                }
             }
             return Ok(new { success = errors.Count == 0, requested = ids.Count, deleted, notFound, errors });
         }
@@ -208,7 +239,7 @@ namespace STRANDVENTURE.Controllers
         public async Task<IActionResult> ListSections(CancellationToken ct)
         {
             if (!await EnsureSuperAdminAsync())
-                return Forbid();
+                return Unauthorized();
 
             var sections = await _sectionService.ListActiveAsync(ct);
 
