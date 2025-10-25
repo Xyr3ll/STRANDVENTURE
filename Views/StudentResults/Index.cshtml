@@ -188,7 +188,7 @@
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="strandDetailsModalLabel">Recommended Strand</h5>
+                    <h5 class="modal-title" id="strandDetailsModalLabel">Answers, Questions and Weights</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -258,9 +258,16 @@
                     var html = '';
                     data.forEach(function(q, idx){
                         html += '<div style="margin-bottom:0.8rem;">';
-                        // Only show numbered question text and its weight rows per your request
+                        // Question title
                         html += '<div style="font-weight:700; margin-bottom:6px;">' + (idx+1) + '. ' + escapeHtml(q.question) + '</div>';
-                        html += '<div style="margin-top:4px; font-weight:700;">Weights</div>';
+                        // Student's selected answer (new)
+                        var selectedText = (q.selectedLetter ? (q.selectedLetter + '. ') : '') + (q.selectedOption || '');
+                        html += '<div style="margin-bottom:6px;"><span style="font-weight:700;">Your answer: </span>' + escapeHtml(selectedText);
+                        if(q.isCorrect === true){
+                            html += ' <span class="badge-pill score-badge" style="margin-left:.5rem;">Correct</span>';
+                        }
+                        // Weights block (existing)
+                        html += '<div style="margin-top:6px; font-weight:700;">Weights</div>';
                         html += formatStrandRows(q.strandWeights);
                         html += '</div>';
                     });
