@@ -269,6 +269,8 @@ public class StudentAssessmentController : StudentPortalControllerBase
             completed,
             nextUrl = completed ? Url.Action("Index", "StudentResults") : Url.Action("Take", new { attemptId }),
             strandScores,
+            // include a full list of active strands so the client can render a consistent bar/chip list with configured colors
+            allStrands = await Db.Strands.Where(s => s.IsActive).OrderBy(s => s.Name).Select(st => new { id = st.Id, name = st.Name, color = string.IsNullOrWhiteSpace(st.Color) ? "#1e6bff" : st.Color }).ToListAsync(ct),
             topQuizUrl, // new field
             halfway = shouldShowHalfway ? new { code = result!.AchievementAwarded!.Code, name = result.AchievementAwarded.Name, description = result.AchievementAwarded.Description, icon = result.AchievementAwarded.Icon } : null
         });

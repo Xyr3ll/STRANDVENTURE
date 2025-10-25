@@ -156,11 +156,29 @@
                 <div class="strand-wrap" id="strandWrap">
                     <button type="button" class="strand-toggle" id="strandToggle" aria-expanded="false" aria-controls="strandMiniBar" title="Show strand scores">Strands</button>
                     <div class="strand-bar" id="strandMiniBar" role="region" aria-label="Top strand scores">
-                        @foreach(var s in Model.StrandScores.Take(4)){
-                            var color = string.IsNullOrWhiteSpace(s.Color) ? "#1e6bff" : s.Color;
-                            <span class="strand-chip" style="background:linear-gradient(135deg,@color,#1e6bff);"> @s.ScorePercent.ToString("0.##")%</span>
-                        }
-                    </div>
+                            @{
+                                // Keep a small server-side fallback map of strand colors so the initial render
+                                // matches the client-side colors even when the API doesn't return a color.
+                                var strandColors = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) {
+                                    { "ABM", "#3f51b5" },
+                                    { "Culinary", "#795548" },
+                                    { "Graphics", "#9c27b0" },
+                                    { "HUMSS-VG", "#009688" },
+                                    { "HUMSS–VG", "#009688" }, // some data may use an en-dash
+                                    { "Software Dev", "#607d8b" },
+                                    { "STEM-Eng", "#2196f3" },
+                                    { "STEM-Med", "#e91e63" },
+                                    { "Tourism", "#ff9800" }
+                                };
+                                // Render up to 8 strands so the top bar remains consistent after navigation
+                                foreach(var s in Model.StrandScores.Take(8)){
+                                    var color = string.IsNullOrWhiteSpace(s.Color)
+                                                    ? (strandColors.ContainsKey(s.StrandName ?? string.Empty) ? strandColors[s.StrandName] : "#1e6bff")
+                                                    : s.Color;
+                                <span class="strand-chip" style="background:linear-gradient(135deg,@color,@color);"> @s.ScorePercent.ToString("0.##")%</span>
+                                }
+                            }
+                        </div>
                 </div>
                 <div class="question-meta">
                     <button type="button" class="question-audio" id="readQuestionBtn" aria-label="Read question aloud" title="Read question" data-state="idle">🔊</button>
@@ -188,22 +206,7 @@
                     }
                 </div>
             </div>
-            <div id="feedbackOverlay" class="feedback-overlay" style="display:none;">
-                <div class="feedback-card" role="alert" aria-live="assertive">
-                    <div class="icon">✔</div>
-                    <h4 class="mb-2 fw-bold" style="font-size:1.35rem; letter-spacing:.5px;">Response Recorded!</h4>
-                    <p class="mb-0" style="font-size:.9rem; opacity:.9;">Updating strand scores...</p>
-                </div>
-            </div>
-            <div id="barsOverlay" class="bars-overlay" style="display:none;">
-                <div class="bar-card">
-                    <h3>Stars Point Collection</h3>
-                    <div class="bar-chart" id="barChart"></div>
-                    <br />
-                    <br />
-                    <button type="button" class="next-btn" id="nextBtn">Next</button>
-                </div>
-            </div>
+            <!-- per-answer overlays removed; top strand chips (#strandMiniBar) now act as the live summary -->
             <div id="podiumOverlay" class="podium-overlay" style="display:none;">
                 <div class="podium-card">
                     <div class="podium-actions">
@@ -333,16 +336,86 @@
   function spawnStars(count){ if(!starLayer) return; for(var i=0;i<count;i++){ var s=document.createElement('div'); s.className='star-spark'+(Math.random()>0.8?' big':''); var x=Math.random()*window.innerWidth; var y=(Math.random()*160)+260; var drift=(Math.random()*120)-60; s.style.left=x+'px'; s.style.top=y+'px'; s.style.setProperty('--x','0px'); s.style.setProperty('--y','0px'); s.style.setProperty('--x-end', drift+'px'); starLayer.appendChild(s); (function(el){ setTimeout(function(){ if(el&&el.parentNode) el.parentNode.removeChild(el); },2100); })(s);} }
   if(countdown){ var n=3; (function tick(){ if(n===0){ if(countdown.parentNode) countdown.parentNode.removeChild(countdown); if(content) content.style.visibility='visible'; spawnStars(30); return;} countdown.textContent=n; n--; setTimeout(tick,900);} )(); } else { setTimeout(function(){ spawnStars(20); },300);} setInterval(function(){ spawnStars(6); },4500);
 
-  var answerForms=document.querySelectorAll('.answer-form');
-  for(var af=0; af<answerForms.length; af++){ (function(f){ f.addEventListener('submit', function(e){ e.preventDefault();
-      stopTTS();
-      if(f.getAttribute('data-submitting')==='1') return; f.setAttribute('data-submitting','1'); var btn=f.querySelector('[data-answer-btn]'); var allBtns=document.querySelectorAll('[data-answer-btn]'); for(var bi=0; bi<allBtns.length; bi++){ allBtns[bi].disabled=true; } if(btn) btn.classList.add('selected'); showFeedback(); var questionId=f.getAttribute('data-question-id'); var optionId=f.getAttribute('data-option-id'); var token=document.querySelector('input[name="__RequestVerificationToken"]'); token=token?token.value:''; var bodyData='__RequestVerificationToken='+encodeURIComponent(token)+'&attemptId='+encodeURIComponent(attemptId||'')+'&questionId='+encodeURIComponent(questionId||'')+'&optionId='+encodeURIComponent(optionId||''); fetch('@Url.Action("AnswerAjax","StudentAssessment")',{ method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body: bodyData }).then(r=> r.json()).then(function(data){ setTimeout(function(){ hideFeedback(); if(data.success){ answeredSoFar++; if(data.halfway){ showAchievementToast(data.halfway); } else { maybeShowHalfwayClientSide(); } if(data.completed){ showPodium(data.strandScores||[], data.nextUrl, data.topQuizUrl); spawnStars(50);} else { showBars(data.strandScores||[], data.completed, data.nextUrl); updateMiniBar(data.strandScores||[]); spawnStars(18);} } else { window.location.reload(); } },1200); }).catch(function(){ window.location.reload(); }); }); })(answerForms[af]); }
+    // Answer submission: send via AJAX and update the top pills (#strandMiniBar)
+    var answerForms=document.querySelectorAll('.answer-form');
+    for(var af=0; af<answerForms.length; af++){ (function(f){ f.addEventListener('submit', function(e){ e.preventDefault();
+            stopTTS();
+            if(f.getAttribute('data-submitting')==='1') return; f.setAttribute('data-submitting','1');
+            var btn=f.querySelector('[data-answer-btn]'); var allBtns=document.querySelectorAll('[data-answer-btn]');
+            for(var bi=0; bi<allBtns.length; bi++){ allBtns[bi].disabled=true; }
+            if(btn) btn.classList.add('selected');
+            var questionId=f.getAttribute('data-question-id'); var optionId=f.getAttribute('data-option-id');
+            var token=document.querySelector('input[name="__RequestVerificationToken"]'); token=token?token.value:'';
+            var bodyData='__RequestVerificationToken='+encodeURIComponent(token)+'&attemptId='+encodeURIComponent(attemptId||'')+'&questionId='+encodeURIComponent(questionId||'')+'&optionId='+encodeURIComponent(optionId||'');
+            fetch('@Url.Action("AnswerAjax","StudentAssessment")',{ method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body: bodyData }).then(r=> r.json()).then(function(data){
+                setTimeout(function(){
+                            if(data.success){
+                                answeredSoFar++;
+                                if(data.halfway){ showAchievementToast(data.halfway); } else { maybeShowHalfwayClientSide(); }
+                                if(data.completed){
+                                    showPodium(data.strandScores||[], data.nextUrl, data.topQuizUrl);
+                                    spawnStars(50);
+                                } else {
+                                    // update the top pills area with up to 8 strands; prefer the full strand list when supplied
+                                    updateMiniBar(data.strandScores||[], data.allStrands||[]);
+                                    spawnStars(18);
+                                    // auto-advance to next question if URL provided; allow a short delay for animations
+                                    if(data.nextUrl){
+                                        setTimeout(function(){ triggerPageFlip(data.nextUrl); }, 800);
+                                    } else {
+                                        // if no nextUrl returned, re-enable answer buttons so user can continue manually
+                                        var allBtns=document.querySelectorAll('[data-answer-btn]');
+                                        for(var bi=0; bi<allBtns.length; bi++){ allBtns[bi].disabled=false; }
+                                        try{ f.removeAttribute('data-submitting'); }catch(_){}
+                                    }
+                                }
+                    } else { window.location.reload(); }
+                }, 1200);
+            }).catch(function(){ window.location.reload(); });
+        }); })(answerForms[af]); }
 
-  function showFeedback(){ stopTTS(); var fo=document.getElementById('feedbackOverlay'); if(fo) fo.style.display='flex'; }
-  function hideFeedback(){ var fo=document.getElementById('feedbackOverlay'); if(fo) fo.style.display='none'; }
-  function updateMiniBar(scores){ var bar=document.getElementById('strandMiniBar'); if(!bar) return; bar.innerHTML=''; var list=scores||[]; for(var i=0;i<list.length && i<4;i++){ var s=list[i]; var chip=document.createElement('span'); chip.className='strand-chip'; chip.style.background='linear-gradient(135deg,'+(s.color||'#1e6bff')+',#1e6bff)'; var pct=(typeof s.percent==='number')?s.percent.toFixed(2):'0'; chip.appendChild(document.createTextNode(pct+'%')); bar.appendChild(chip);} }
-    function showBars(scores, completed, nextUrl){ stopTTS(); var bo=document.getElementById('barsOverlay'); var chart=document.getElementById('barChart'); if(!bo||!chart) return; chart.innerHTML=''; var arr=(scores||[]).slice(); arr.sort(function(a,b){ return (b.percent||0)-(a.percent||0); }); // show up to 8 bars
-        var topItems=arr.slice(0,8); var anyFractional=false; for(var i=0;i<topItems.length;i++){ var p=topItems[i].percent; if(typeof p==='number' && p>0 && p<=1){ anyFractional=true; break;} } var normalized=[]; for(var j=0;j<topItems.length;j++){ var s=topItems[j]; var v= typeof s.percent==='number'? s.percent:0; if(anyFractional && v<=1) v*=100; if(v>100) v=100; if(v<0) v=0; normalized.push({ name: s.name, value: v, color: s.color || '#1e6bff'}); } for(var k=0;k<normalized.length;k++){ var ns=normalized[k]; var bar=document.createElement('div'); bar.className='bar'; var label=document.createElement('div'); label.className='bar-label'; label.appendChild(document.createTextNode(ns.name)); var fillWrap=document.createElement('div'); fillWrap.style.display='flex'; fillWrap.style.flexDirection='column'; fillWrap.style.justifyContent='flex-end'; fillWrap.style.flex='1'; var fill=document.createElement('div'); fill.className='bar-fill'; fill.style.background='linear-gradient(180deg,'+ns.color+',#0b1626)'; fill.style.height='0%'; fill.style.borderRadius='8px'; (function(f,v){ setTimeout(function(){ f.style.height=v+'%'; },35); })(fill, ns.value); var pct=document.createElement('div'); pct.style.fontSize='0.68rem'; pct.style.textAlign='center'; pct.style.marginTop='6px'; pct.style.color='#ffffff'; pct.textContent = ns.value.toFixed(1)+'%'; fillWrap.appendChild(fill); fillWrap.appendChild(pct); bar.appendChild(fillWrap); bar.appendChild(label); if(ns.value>=50){ var star=document.createElement('div'); star.className='bar-star'; star.appendChild(document.createTextNode('⭐')); bar.appendChild(star);} chart.appendChild(bar);} bo.style.display='flex'; var nextBtn=document.getElementById('nextBtn'); if(nextBtn){ nextBtn.onclick=function(){ triggerPageFlip(nextUrl); }; } }
+    // feedback overlay removed — use live top pills
+    // client-side fallback map for strand colors (matches server-side fallback above)
+    var strandColorMap = {
+        'ABM': '#3f51b5',
+        'Culinary': '#795548',
+        'Graphics': '#9c27b0',
+        'HUMSS-VG': '#009688',
+        'HUMSS–VG': '#009688',
+        'Software Dev': '#607d8b',
+        'STEM-Eng': '#2196f3',
+        'STEM-Med': '#e91e63',
+        'Tourism': '#ff9800'
+    };
+
+    function updateMiniBar(scores, allStrands){
+        var bar=document.getElementById('strandMiniBar'); if(!bar) return; bar.innerHTML='';
+        var scoresList = scores||[];
+        var scoresById = {};
+        for(var i=0;i<scoresList.length;i++){ var s=scoresList[i]; if(!s) continue; scoresById[s.id || s.Id || s.strandId || ''] = s.percent ?? s.ScorePercent ?? s.score ?? 0; }
+
+        var useAll = Array.isArray(allStrands) && allStrands.length>0;
+        var source = useAll ? allStrands : scoresList;
+        for(var i=0;i<source.length && i<8;i++){
+            var item = source[i]||{};
+            var id = item.id || item.Id || '';
+            var name = item.name || item.Name || item.StrandName || '';
+            var color = item.color || item.Color || strandColorMap[name] || '#1e6bff';
+            var pct = 0;
+            if(useAll){ pct = scoresById[id] ?? 0; }
+            else {
+                pct = item.percent ?? item.ScorePercent ?? 0;
+            }
+            var chip=document.createElement('span');
+            chip.className='strand-chip top-pill';
+            chip.style.background='linear-gradient(135deg,'+color+','+color+')';
+            chip.style.padding='.35rem .7rem'; chip.style.borderRadius='999px'; chip.style.fontSize='.78rem'; chip.style.color='#fff'; chip.style.display='inline-block'; chip.style.marginRight='.5rem';
+            var pctText = (typeof pct === 'number') ? pct.toFixed(2) : (parseFloat(pct)||0).toFixed(2);
+            chip.appendChild(document.createTextNode(pctText+'%'));
+            bar.appendChild(chip);
+        }
+    }
+    
   function triggerPageFlip(url){ stopTTS(); if(!shell){ window.location.href=url; return;} shell.classList.remove('page-flip-enter'); shell.classList.add('page-flip-exit'); setTimeout(function(){ window.location.href=url; },420); }
   function showPodium(scores, resultsUrl, topQuizUrl){ stopTTS(); var podium=document.getElementById('podiumOverlay'); var grid=document.getElementById('podiumGrid'); var list=document.getElementById('recoList'); var viewLink=document.getElementById('viewResultsLink'); var quizLink=document.getElementById('takeTopQuizLink'); if(!podium||!grid||!list) return; grid.innerHTML=''; list.innerHTML=''; var ordered=(scores||[]).slice(); ordered.sort(function(a,b){ return (b.percent||0)-(a.percent||0); }); var top3=ordered.slice(0,3); function makeCol(strand, rankClass, rankNum){ var col=document.createElement('div'); col.className='podium-col '+rankClass; var circle=document.createElement('div'); circle.className='podium-rank'; circle.appendChild(document.createTextNode(rankNum.toString())); var name=document.createElement('div'); name.className='podium-name'; name.appendChild(document.createTextNode((strand&&strand.name)||'')); col.appendChild(circle); col.appendChild(name); return col; } if(top3.length){ if(top3[1]) grid.appendChild(makeCol(top3[1],'silver',2)); grid.appendChild(makeCol(top3[0],'gold',1)); if(top3[2]) grid.appendChild(makeCol(top3[2],'bronze',3)); } for(var r=0;r<top3.length;r++){ var s=top3[r]; var item=document.createElement('div'); item.className='reco-item'; var pct=(s.percent||0).toFixed(2); var strong=document.createElement('strong'); strong.appendChild(document.createTextNode((s.name||'Strand')+' ('+pct+'%)')); item.appendChild(strong); var desc=(s.description||'Shows strong potential.'); item.appendChild(document.createTextNode(' '+desc)); list.appendChild(item);} if(viewLink) viewLink.href = resultsUrl || '@Url.Action("Index","StudentResults")'; if(quizLink){ if(topQuizUrl){ quizLink.href=topQuizUrl; quizLink.style.display='inline-flex'; } else { quizLink.style.display='none'; } } podium.style.display='flex'; }
   

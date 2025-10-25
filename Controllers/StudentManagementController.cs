@@ -19,6 +19,13 @@ namespace STRANDVENTURE.Controllers
         private readonly IPasswordHasher _passwordHasher;
         private readonly ApplicationDbContext _db;
 
+        // DTO for returning per-option per-strand raw weights to the client
+        private sealed class StrandWeightDto
+        {
+            public string strand { get; set; } = string.Empty;
+            public decimal weight { get; set; }
+        }
+
         public StudentManagementController(
             ILogger<StudentManagementController> logger,
             IEmployeeService employeeService,
@@ -163,6 +170,120 @@ namespace STRANDVENTURE.Controllers
                 .ToListAsync(ct);
 
             return Json(new { data = scores });
+        }
+
+        // NEW: Return student's answers for the honored attempt
+        [HttpGet]
+        public async Task<IActionResult> StudentAnswers(Guid studentId, CancellationToken ct)
+        {
+            var role = HttpContext.Session.GetString("UserRole");
+            if (role != "Teacher" && role != "SuperAdmin")
+                return Unauthorized();
+
+            if (studentId == Guid.Empty)
+                return BadRequest(new { message = "studentId required." });
+
+            var email = HttpContext.Session.GetString("UserEmail");
+            if (string.IsNullOrWhiteSpace(email))
+                return Unauthorized();
+
+            var employee = await _employeeService.GetByEmailAsync(email);
+            if (employee is null)
+                return Unauthorized();
+
+            var student = await _db.Students.FirstOrDefaultAsync(s => s.Id == studentId && s.IsActive, ct);
+            if (student is null) return NotFound(new { message = "Student not found." });
+
+            var result = await _db.StudentAssessmentResults.AsNoTracking().FirstOrDefaultAsync(r => r.StudentId == studentId, ct);
+            if (result is null)
+                return Ok(new { data = Array.Empty<object>() });
+
+            var answers = await _db.StudentAssessmentAnswers
+                .Where(a => a.AttemptId == result.AttemptId)
+                .Include(a => a.Question)
+                .Include(a => a.QuestionOption)
+                .OrderBy(a => a.Question.QuestionOrder)
+                .Select(a => new
+                {
+                    questionId = a.QuestionId,
+                    question = a.Question.QuestionText,
+                    selectedOptionId = a.QuestionOptionId,
+                    selectedOption = a.QuestionOption.OptionText,
+                    selectedLetter = a.QuestionOption.OptionLetter,
+                    isCorrect = a.QuestionOption.IsCorrect
+                })
+                .ToListAsync(ct);
+
+            // Fetch correct options for questions included (so we can show correct answer when student missed it)
+            var questionIds = answers.Select(x => x.questionId).Distinct().ToList();
+            var correctOptions = await _db.QuestionOptions
+                .Where(o => questionIds.Contains(o.QuestionId) && o.IsCorrect)
+                .Select(o => new { o.QuestionId, correctOption = o.OptionText, correctLetter = o.OptionLetter })
+                .ToListAsync(ct);
+
+            var correctByQ = correctOptions.ToDictionary(x => x.QuestionId, x => new { x.correctOption, x.correctLetter });
+
+            // will build enriched results including weightPercent below
+
+            // Fetch total option weight per selected option (sum of questionOptionStrandWeights.Weight for that option)
+            var selectedOptionIds = answers.Select(a => a.selectedOptionId).Where(id => id != Guid.Empty).Distinct().ToList();
+            var optionWeights = await _db.QuestionOptionStrandWeights
+                .Where(w => selectedOptionIds.Contains(w.QuestionOptionId))
+                .GroupBy(w => w.QuestionOptionId)
+                .Select(g => new { OptionId = g.Key, TotalWeight = g.Sum(x => x.Weight) })
+                .ToListAsync(ct);
+            var weightByOption = optionWeights.ToDictionary(x => x.OptionId, x => x.TotalWeight);
+
+            // Fetch strand weights per selected option (for UI display of raw weights)
+            var optionStrandRows = await _db.QuestionOptionStrandWeights
+                .Where(w => selectedOptionIds.Contains(w.QuestionOptionId))
+                .Include(w => w.Strand)
+                .Select(w => new { w.QuestionOptionId, Strand = w.Strand.Name, w.Weight })
+                .ToListAsync(ct);
+            var strandWeightsByOption = optionStrandRows
+                .GroupBy(x => x.QuestionOptionId)
+                .ToDictionary(g => g.Key, g => g.Select(x => new StrandWeightDto { strand = x.Strand, weight = x.Weight }).ToList());
+
+                // Also compute total weight per question (sum of weights for all options of that question)
+                var optionWeightsWithQuestion = await (
+                    from w in _db.QuestionOptionStrandWeights
+                    join o in _db.QuestionOptions on w.QuestionOptionId equals o.Id
+                    where questionIds.Contains(o.QuestionId)
+                    group w by new { o.QuestionId, w.QuestionOptionId } into g
+                    select new { QuestionId = g.Key.QuestionId, OptionId = g.Key.QuestionOptionId, TotalWeight = g.Sum(x => x.Weight) }
+                ).ToListAsync(ct);
+
+                var totalByQuestion = optionWeightsWithQuestion
+                    .GroupBy(x => x.QuestionId)
+                    .ToDictionary(g => g.Key, g => g.Sum(x => x.TotalWeight));
+
+            var enriched = answers.Select(a => new
+            {
+                a.questionId,
+                a.question,
+                a.selectedOptionId,
+                a.selectedOption,
+                a.selectedLetter,
+                a.isCorrect,
+                correctOption = correctByQ.TryGetValue(a.questionId, out var c) ? c.correctOption : string.Empty,
+                correctLetter = correctByQ.TryGetValue(a.questionId, out var c2) ? c2.correctLetter : string.Empty,
+                // weight percent (sum of strand weights for the selected option) as decimal percent (e.g. 0.25 => 25)
+                // include raw weight and a display-friendly string
+                weightRaw = weightByOption.TryGetValue(a.selectedOptionId, out var wt) ? (double)wt : 0.0,
+                // compute normalized percent relative to sum of weights for that question
+                weightOfQuestionPercent = (totalByQuestion.TryGetValue(a.questionId, out var tot) && tot > 0) ? (double)( (weightByOption.TryGetValue(a.selectedOptionId, out var wtv) ? wtv : 0.0m) / tot * 100.0m ) : 0.0,
+                // human friendly display: if original raw is fractional (<=1) show percent, otherwise show raw value; also provide normalized percent
+                weightDisplay = weightByOption.TryGetValue(a.selectedOptionId, out var wt2)
+                    ? (wt2 <= 1.0m ? ((double)wt2 * 100.0).ToString("0") + "%" : ((double)wt2).ToString("0"))
+                    : "0%",
+                weightNormDisplay = (totalByQuestion.TryGetValue(a.questionId, out var tot2) && tot2 > 0)
+                    ? Math.Round((double)((weightByOption.TryGetValue(a.selectedOptionId, out var wtv2) ? wtv2 : 0.0m) / tot2 * 100.0m), 0)
+                    : 0.0,
+                // include raw per-strand weights for the selected option
+                strandWeights = strandWeightsByOption.TryGetValue(a.selectedOptionId, out var sw) ? sw : new List<StrandWeightDto>()
+            }).ToList();
+
+            return Json(new { data = enriched });
         }
 
         // Returns all active sections under the logged-in teacher for dropdowns (service-based)
